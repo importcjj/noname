@@ -39,13 +39,18 @@ func main() {
 		Timeout: time.Second * 5,
 	}
 
+	log.Println("正在监控叮咚运力。。。")
+
 	for {
 		time.Sleep(1 * time.Second)
 
 		baseReq, err := pcurl.ParseAndRequest(configString)
+
 		if err != nil {
 			log.Fatalf("curl文件解析失败: %v", err)
 		}
+
+		baseReq.Header.Del("Accept-Encoding")
 
 		resp, err := client.Do(baseReq)
 		if err != nil {
