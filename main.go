@@ -42,12 +42,12 @@ func main() {
 	for {
 		time.Sleep(1 * time.Second)
 
-		checkTimeRequest, err := pcurl.ParseAndRequest(configString)
+		baseReq, err := pcurl.ParseAndRequest(configString)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("curl文件解析失败: %v", err)
 		}
 
-		resp, err := client.Do(checkTimeRequest)
+		resp, err := client.Do(baseReq)
 		if err != nil {
 			log.Printf("无法请求: %v", err)
 			continue
@@ -59,15 +59,22 @@ func main() {
 		var timeDatas []*MultiReserveTimeResponse
 		response.Data = &timeDatas
 
-		err = json.NewDecoder(resp.Body).Decode(&response)
+		b, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Printf("无法读取请求题: %v", err)
+			log.Printf("无法读取返回: %v", err)
+			continue
+		}
+
+		err = json.Unmarshal(b, &response)
+		if err != nil {
+			log.Printf("无法解析返回: %v", err)
+			log.Println(string(b))
 			continue
 		}
 
 		if len(timeDatas) == 0 {
 			log.Println("请求异常")
-			log.Println(response)
+			log.Println(string(b))
 		}
 		for _, timeData := range timeDatas {
 			if len(timeData.Time) == 0 {
