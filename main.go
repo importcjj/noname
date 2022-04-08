@@ -42,7 +42,7 @@ func main() {
 	log.Println("正在监控叮咚运力。。。")
 
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(1500 * time.Millisecond)
 
 		baseReq, err := pcurl.ParseAndRequest(configString)
 
@@ -51,7 +51,8 @@ func main() {
 		}
 
 		baseReq.Header.Del("Accept-Encoding")
-		baseReq.Header.Set("user-agent", "Mozilla/5.0 ( NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36 MicroMessenger/7.0.9.501 NetType/WIFI MiniProgramEnv/ Wechat")
+		baseReq.Header.Del("user-agent")
+		// baseReq.Header.Set("user-agent", "Mozilla/5.0 ( NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36 MicroMessenger/7.0.9.501 NetType/WIFI MiniProgramEnv/ Wechat")
 
 		resp, err := client.Do(baseReq)
 		if err != nil {
