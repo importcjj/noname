@@ -44,6 +44,12 @@ func main() {
 	for {
 		time.Sleep(1500 * time.Millisecond)
 
+		now := time.Now()
+		// 非营业时间
+		if !IsOpenTime(now) {
+			continue
+		}
+
 		baseReq, err := pcurl.ParseAndRequest(configString)
 
 		if err != nil {
@@ -118,4 +124,11 @@ type MultiReserveTimeResponse struct {
 			EndTime   string `json:"end_time"`
 		} `json:"times"`
 	} `json:"time"`
+}
+
+func IsOpenTime(t time.Time) bool {
+	h := t.Hour()
+	m := t.Minute()
+
+	return (h == 6 && m >= 30) || (h > 6 && h < 21)
 }
