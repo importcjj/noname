@@ -342,6 +342,11 @@ func (api *API) newHeader() http.Header {
 	header.Set("ddmc-app-client-id", "4")
 	header.Set("ddmc-app-version", "2.83.0")
 	header.Set("ddmc-channel", "applet")
+	header.Set("ddmc-latitude", "23.109281")
+	header.Set("ddmc-ip", "")
+	header.Set("ddmc-device-id", "osP8I0RgncVIhrJLWwUCb0gi9uDQ")
+	header.Set("ddmc-longitude", "113.415302")
+	header.Set("ddmc-os-version", "[object Undefined]")
 	header.Set("ddmc-time", strconv.FormatInt(time.Now().Unix(), 10))
 	if len(api.ddmcUid) > 0 {
 		header.Set("ddmc-uid", api.ddmcUid)

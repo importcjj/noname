@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
+	"time"
 
 	"github.com/importcjj/ddxq/pkg/api"
 )
 
-var cookie = flag.String("cookie", "DDXQSESSID=b6b755f09c045e9732dcc31ac9b67203", "叮咚cookie")
+var cookie = flag.String("cookie", "", "叮咚cookie")
 
 func main() {
 	flag.Parse()
@@ -36,36 +36,68 @@ func main() {
 		if address.IsDefault {
 			stationId = address.StationID
 			addressId = address.ID
+			log.Printf("[%s] %s", address.StationInfo.CityName, address.Location.Address)
+			break
 		}
-		log.Printf("[%s]", address.StationInfo.CityName)
-	}
 
-	cart, err := ddapi.Cart(stationId)
-	if err != nil {
-		log.Fatal(err)
 	}
-
-	times, err := ddapi.GetMultiReverseTime(stationId, cart.NewOrderProductList[0].Products)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	var cart *api.CartInfo
 	var reserveTime api.ReserveTime
-	for _, t := range *times {
-		reserveTime = t.Time[0].Times[0]
+
+GetCart:
+	log.Println("正在获取购物车详情中...")
+	for {
+		cart, err = ddapi.Cart(stationId)
+		if err != nil {
+			log.Println("购物车获取失败", err)
+			time.Sleep(1 * time.Minute)
+			continue
+		}
+
+		if len(cart.NewOrderProductList) == 0 {
+			log.Println("购物车无可购买商品")
+			time.Sleep(1 * time.Minute)
+			continue
+		}
+
 		break
 	}
 
+	log.Println("正在获取可用运力中...")
+GetTime:
+	for {
+		times, err := ddapi.GetMultiReverseTime(stationId, cart.NewOrderProductList[0].Products)
+		if err != nil {
+			log.Println("获取运力失败", err)
+		} else {
+			for _, item := range *times {
+				for _, day := range item.Time {
+					for _, time := range day.Times {
+						if !time.FullFlag {
+							reserveTime = time
+							break GetTime
+						}
+					}
+				}
+			}
+		}
+		time.Sleep(1500 * time.Millisecond)
+	}
+
+	log.Println("正在自动下单中...")
+
 	checkOrder, err := ddapi.CheckOrder(stationId, addressId, cart.NewOrderProductList[0])
 	if err != nil {
-		log.Fatal(err)
+		log.Println("检查订单失败", err)
+		goto GetCart
 	}
 
-	fmt.Println("=====")
 	order, err := ddapi.AddNewOrder(stationId, addressId, 6, cart, reserveTime, checkOrder)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("下单失败", err)
+		goto GetCart
 	}
 
-	fmt.Println(order)
+	log.Println("下单成功", order)
+	goto GetCart
 }

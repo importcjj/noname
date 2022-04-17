@@ -44,7 +44,7 @@ type Address struct {
 
 type Location struct {
 	Typecode string    `json:"typecode"`
-	Address  string    `json:"string"`
+	Address  string    `json:"address"`
 	Name     string    `json:"name"`
 	Location []float64 `json:"location"`
 	ID       string    `json:"id"`
@@ -152,6 +152,7 @@ type ReserveTime struct {
 	StartTimestamp int64  `json:"start_timestamp"`
 	EndTimestamp   int64  `json:"end_timestamp"`
 	EndTime        string `json:"end_time"`
+	SelectMsg      string `json:"select_msg"`
 }
 
 type CheckOrder struct {
