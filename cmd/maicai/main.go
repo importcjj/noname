@@ -135,6 +135,8 @@ CheckTime:
 					for _, time := range day.Times {
 						if !time.FullFlag {
 							reserveTime = time
+							dingdingbot.Send(context.Background(), reserveTime.SelectMsg)
+
 							goto MakeOrder
 						}
 					}
@@ -145,7 +147,6 @@ CheckTime:
 	}
 
 MakeOrder:
-	dingdingbot.Send(context.Background(), reserveTime.SelectMsg)
 	log.Println("开始自动下单...")
 	cart := globalCart.Get()
 	if len(cart.NewOrderProductList) == 0 {
