@@ -79,9 +79,11 @@ type CartProductList struct {
 }
 
 type CartProductItem struct {
-	ID     string     `json:"id"`
-	CartID string     `json:"cart_id"`
-	Sizes  []struct{} `json:"sizes"`
+	ProductName string     `json:"product_name"`
+	ID          string     `json:"id"`
+	CartID      string     `json:"cart_id"`
+	Sizes       []struct{} `json:"sizes"`
+	IsCheck     int        `json:"is_check"`
 }
 
 type ProductList struct {

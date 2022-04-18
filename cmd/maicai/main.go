@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/importcjj/ddxq/pkg/api"
@@ -15,6 +15,67 @@ var (
 	cookie       = flag.String("cookie", "", "叮咚cookie")
 	dingdinghook = flag.String("dingding", "", "钉钉机器人")
 )
+
+var globalCart = NewCart()
+
+type Cart struct {
+	cart *api.CartInfo
+	mu   sync.Mutex
+}
+
+func NewCart() *Cart {
+	return &Cart{
+		cart: new(api.CartInfo),
+	}
+}
+
+func (cart *Cart) Set(newCart *api.CartInfo) {
+	cart.mu.Lock()
+	defer cart.mu.Unlock()
+
+	cart.cart = newCart
+}
+
+func (cart *Cart) Get() *api.CartInfo {
+	cart.mu.Lock()
+	defer cart.mu.Unlock()
+
+	return cart.cart
+}
+
+func intervalUpdateCart(stationId string, ddapi *api.API) {
+
+	for {
+		log.Println("正在更新购物车详情...")
+		cart, err := ddapi.Cart(stationId)
+		if err != nil {
+			log.Println("购物车获取失败", err)
+		} else {
+
+			// 勾选有货的商品
+			if effective := cart.Product.Effective; len(effective) > 0 {
+				list := effective[0]
+				for _, item := range list.Products {
+					// 不重复勾选
+					if item.IsCheck == 1 {
+						continue
+					}
+					cart, err = ddapi.UpdateCheck(stationId, item.ID, item.CartID)
+					if err != nil {
+						log.Println(err)
+					} else {
+						log.Printf("已添加 %s", item.ProductName)
+					}
+
+				}
+			}
+
+			globalCart.Set(cart)
+		}
+
+		time.Sleep(1 * time.Minute)
+	}
+}
 
 func main() {
 	flag.Parse()
@@ -49,46 +110,22 @@ func main() {
 		}
 
 	}
-	var cart *api.CartInfo
+
+	// 定期更新购物车
+	go intervalUpdateCart(stationId, ddapi)
+
+	log.Println("开始运行...")
 	var reserveTime api.ReserveTime
 
-GetCart:
-	log.Println("正在获取购物车详情中...")
+CheckTime:
+	log.Println("正在检查运力...")
 	for {
-		cart, err = ddapi.Cart(stationId)
-		if err != nil {
-			log.Println("购物车获取失败", err)
-			time.Sleep(10 * time.Second)
-			continue
-		}
 
-		// 勾选有货的商品
-		if effective := cart.Product.Effective; len(effective) > 0 {
-			list := effective[0]
-			for _, item := range list.Products {
-				cart, err = ddapi.UpdateCheck(stationId, item.ID, item.CartID)
-				if err != nil {
-					log.Println(err)
-				}
-
-				fmt.Println(cart)
-			}
-		}
-
+		cart := globalCart.Get()
 		if len(cart.NewOrderProductList) == 0 {
-			log.Println("购物车无可购买商品")
-			time.Sleep(10 * time.Second)
 			continue
 		}
 
-		break
-	}
-
-	fmt.Println(cart.NewOrderProductList)
-
-	log.Println("正在获取可用运力中...")
-GetTime:
-	for {
 		times, err := ddapi.GetMultiReverseTime(stationId, cart.NewOrderProductList[0].Products)
 		if err != nil {
 			log.Println("获取运力失败", err)
@@ -98,7 +135,7 @@ GetTime:
 					for _, time := range day.Times {
 						if !time.FullFlag {
 							reserveTime = time
-							break GetTime
+							goto MakeOrder
 						}
 					}
 				}
@@ -107,23 +144,29 @@ GetTime:
 		time.Sleep(1500 * time.Millisecond)
 	}
 
+MakeOrder:
 	dingdingbot.Send(context.Background(), reserveTime.SelectMsg)
-	log.Println("正在自动下单中...")
+	log.Println("开始自动下单...")
+	cart := globalCart.Get()
+	if len(cart.NewOrderProductList) == 0 {
+		log.Println("购物车内无可购买商品, 终止下单")
+		goto CheckTime
+	}
 
 	checkOrder, err := ddapi.CheckOrder(stationId, addressId, cart.NewOrderProductList[0])
 	if err != nil {
 		log.Println("检查订单失败", err)
-		goto GetCart
+		goto CheckTime
 	}
 
 	order, err := ddapi.AddNewOrder(stationId, addressId, api.PayTypeAlipay, cart, reserveTime, checkOrder)
 	if err != nil {
 		log.Println("下单失败", err)
-		goto GetCart
+		goto CheckTime
 	}
 
 	log.Println("下单成功", order)
 	dingdingbot.Send(context.Background(), "下单成功, 请付款")
 
-	goto GetCart
+	goto CheckTime
 }

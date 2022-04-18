@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -199,8 +198,6 @@ func (api *API) UpdateCheck(stationId string, productId string, cartId string) (
 		return nil, err
 	}
 
-	fmt.Println(string(packagesData))
-
 	var urlForm = api.newURLEncodedForm()
 	urlForm.Set("station_id", stationId)
 	urlForm.Set("product", string(packagesData))
@@ -230,9 +227,8 @@ func (api *API) UpdateCheck(stationId string, productId string, cartId string) (
 }
 
 func (api *API) CheckOrder(stationId, addressId string, productList ProductList) (*CheckOrder, error) {
-	type ReservedTime struct {
-		ReservedTimeStart *int64 `json:"reserved_time_start"`
-		ReservedTimeEnd   *int64 `json:"reserved_time_end"`
+	if len(productList.Products) == 0 {
+		return nil, errors.New("没有可购买商品")
 	}
 
 	for i := range productList.Products {
@@ -241,6 +237,10 @@ func (api *API) CheckOrder(stationId, addressId string, productList ProductList)
 		product.TotalMoney = product.TotalPrice
 	}
 
+	type ReservedTime struct {
+		ReservedTimeStart *int64 `json:"reserved_time_start"`
+		ReservedTimeEnd   *int64 `json:"reserved_time_end"`
+	}
 	var data = struct {
 		ProductList
 		ReservedTime ReservedTime `json:"reserved_time"`
