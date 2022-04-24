@@ -16,6 +16,7 @@ import (
 type API struct {
 	Cookie string
 	client *http.Client
+	signer *Signer
 
 	ddmcUid string
 }
@@ -24,9 +25,16 @@ func NewAPI(cookie string) (*API, error) {
 	if len(cookie) == 0 {
 		return nil, errors.New("无效的cookie")
 	}
+
+	signer, err := NewSigner("./sign.js")
+	if err != nil {
+		return nil, err
+	}
+
 	return &API{
 		Cookie: cookie,
 		client: http.DefaultClient,
+		signer: signer,
 	}, nil
 }
 
@@ -55,7 +63,7 @@ func (api *API) UserDetail() (*UserDetail, error) {
 	request.Header = header
 
 	var detail = new(UserDetail)
-	err = api.do(request, detail)
+	err = api.do(request, nil, detail)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +95,7 @@ func (api *API) UserAddress() (*UserAddress, error) {
 	header.Set("host", "sunquan.api.ddxq.mobi")
 	request.Header = header
 	var address = new(UserAddress)
-	err = api.do(request, address)
+	err = api.do(request, nil, address)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +127,7 @@ func (api *API) Cart(stationId string) (*CartInfo, error) {
 	var header = api.newHeader()
 	request.Header = header
 	var cart = new(CartInfo)
-	err = api.do(request, cart)
+	err = api.do(request, nil, cart)
 	if err != nil {
 		return nil, err
 	}
@@ -127,51 +135,36 @@ func (api *API) Cart(stationId string) (*CartInfo, error) {
 	return cart, nil
 }
 
-func (api *API) GetMultiReverseTime(stationId string, products []ProductListItem) (*MultiReserveTime, error) {
-	productsData, err := json.Marshal([]interface{}{products})
+func (api *API) GetMultiReverseTime(stationId, addressId string, products []ProductListItem) (*MultiReserveTime, error) {
+	_, err := json.Marshal([]interface{}{products})
 	if err != nil {
 		return nil, err
 	}
 
-	var urlForms = url.Values{}
-	// urlForms.Set("uid", "")
-	// urlForms.Set("longitude", "")
-	// urlForms.Set("latitude", "")
-	urlForms.Set("station_id", stationId)
-	// urlForms.Set("city_number", "")
-	urlForms.Set("api_version", "9.50.0")
-	urlForms.Set("app_version", "2.83.0")
-	urlForms.Set("applet_source", "")
-	urlForms.Set("channel", "applet")
-	urlForms.Set("app_client_id", "4")
-	// urlForms.Set("sharer_uid", "")
-	// urlForms.Set("s_id", "")
-	// urlForms.Set("openid", "")
-	// urlForms.Set("h5_source", "")
-	// urlForms.Set("time", "")
-	// urlForms.Set("device_token", "")
-	// urlForms.Set("address_id", "")
-	// urlForms.Set("group_config_id", "")
-	urlForms.Set("products", string(productsData))
-	// urlForms.Set("isBridge", "false")
-	// urlForms.Set("nars", "")
-	// urlForms.Set("sesi", "")
+	params := api.newURLEncodedForm()
+	params.Add("address_id", `5e5e2c4bc7316f7d8cc20828`)
+	params.Add("group_config_id", ``)
+	params.Add("products", `[[{"type":1,"id":"612cc0982c34fab505117d4e","price":"828.00","count":1,"description":"","sizes":[],"cart_id":"612cc0982c34fab505117d4e","parent_id":"","parent_batch_type":-1,"category_path":"","manage_category_path":"411,412,413","activity_id":"","sku_activity_id":"","conditions_num":"","product_name":"洋河蓝色经典梦之蓝M6+52度白酒 550ml/瓶","product_type":0,"small_image":"https://ddfs-public.ddimg.mobi/img/blind/product-management/202108/1242efbb2a37470aa081683513fb3677.jpg?width=800&height=800","total_price":"828.00","origin_price":"828.00","total_origin_price":"828.00","no_supplementary_price":"828.00","no_supplementary_total_price":"828.00","size_price":"0.00","buy_limit":0,"price_type":0,"promotion_num":0,"instant_rebate_money":"0.00","is_invoice":1,"sub_list":[],"is_booking":0,"is_bulk":0,"view_total_weight":"瓶","net_weight":"550","net_weight_unit":"ml","storage_value_id":0,"temperature_layer":"","sale_batches":{"batch_type":-1},"is_shared_station_product":0,"is_gift":0,"supplementary_list":[],"order_sort":1,"is_presale":0}]]`)
+	params.Add("isBridge", `false`)
+	// params.Add("nars", `f109a4692e2ce8404d3a2a96f0a3b199`)
+	// params.Add("sesi", `RYx3k3E6cacc851110cf3c3063dc18b383f75aa`)
 
 	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/order/getMultiReserveTime")
 	if err != nil {
 		return nil, err
 	}
 
-	request, err := http.NewRequest(http.MethodPost, url.String(), io.NopCloser(strings.NewReader(urlForms.Encode())))
+	request, err := http.NewRequest(http.MethodPost, url.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var header = api.newHeader()
 	header.Set("ddmc-station-id", stationId)
+
 	request.Header = header
 	var times = new(MultiReserveTime)
-	err = api.do(request, times)
+	err = api.do(request, params, times)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +202,7 @@ func (api *API) UpdateCheck(stationId string, productId string, cartId string) (
 		return nil, err
 	}
 
-	request, err := http.NewRequest(http.MethodPost, url.String(), io.NopCloser(strings.NewReader(urlForm.Encode())))
+	request, err := http.NewRequest(http.MethodPost, url.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +211,7 @@ func (api *API) UpdateCheck(stationId string, productId string, cartId string) (
 	header.Set("ddmc-station-id", stationId)
 	request.Header = header
 	var cart = new(CartInfo)
-	err = api.do(request, cart)
+	err = api.do(request, urlForm, cart)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +264,7 @@ func (api *API) CheckOrder(stationId, addressId string, productList ProductList)
 		return nil, err
 	}
 
-	request, err := http.NewRequest(http.MethodPost, url.String(), io.NopCloser(strings.NewReader(urlForm.Encode())))
+	request, err := http.NewRequest(http.MethodPost, url.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +273,7 @@ func (api *API) CheckOrder(stationId, addressId string, productList ProductList)
 	header.Set("ddmc-station-id", stationId)
 	request.Header = header
 	var checkOrder = new(CheckOrder)
-	err = api.do(request, checkOrder)
+	err = api.do(request, urlForm, checkOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -363,7 +356,7 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 		return nil, err
 	}
 
-	request, err := http.NewRequest(http.MethodPost, url.String(), io.NopCloser(strings.NewReader(urlForm.Encode())))
+	request, err := http.NewRequest(http.MethodPost, url.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -372,7 +365,7 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 	header.Set("ddmc-station-id", stationId)
 	request.Header = header
 	var addNewOrder = new(AddNewOrder)
-	err = api.do(request, addNewOrder)
+	err = api.do(request, urlForm, addNewOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -394,6 +387,7 @@ func (api *API) newHeader() http.Header {
 	header.Set("ddmc-channel", "applet")
 	header.Set("ddmc-latitude", "23.109281")
 	header.Set("ddmc-ip", "")
+
 	header.Set("ddmc-device-id", "osP8I0RgncVIhrJLWwUCb0gi9uDQ")
 	header.Set("ddmc-longitude", "113.415302")
 	header.Set("ddmc-os-version", "[object Undefined]")
@@ -406,27 +400,48 @@ func (api *API) newHeader() http.Header {
 }
 
 func (api *API) newURLEncodedForm() url.Values {
-	var urlForm = url.Values{}
-	urlForm.Set("api_version", "9.50.0")
-	urlForm.Set("app_version", "2.83.0")
-	urlForm.Set("applet_source", "")
-	urlForm.Set("channel", "applet")
-	urlForm.Set("app_client_id", "4")
-	urlForm.Set("h5_source", "")
-	urlForm.Set("time", strconv.FormatInt(time.Now().Unix(), 10))
-	urlForm.Set("nars", "56407491c74fbf56ee5332ca4481b2ff")
-	urlForm.Set("sesi", "USr1yiV1101ab91c733a3b3ade5e385c723008c")
-	urlForm.Set("device_token", "WHJMrwNw1k/FKPjcOOgRd+FFkJ4k/dvcXVSNUCOAxsMTu/xyJRcTbBCUmIXEs+qJX5NhJWTdLRMcTiw6M7u7LtF7s9NNXnvnbdCW1tldyDzmauSxIJm5Txg==1487582755342")
-	urlForm.Set("s_id", "4606726bbe6337d4094e1dec808431d9")
-	urlForm.Set("sharer_uid", "")
-	urlForm.Set("longitude", "121.409128")
-	urlForm.Set("latitude", "31.306508")
-	urlForm.Set("city_number", "0101")
+	var params = url.Values{}
+	params.Add("uid", `5db2faa481eef77f04ab13e1`)
+	params.Add("longitude", `121.409128`)
+	params.Add("latitude", `31.306508`)
+	params.Add("station_id", `5bc5a799716de1a94f8b6fb4`)
+	params.Add("city_number", `0101`)
+	params.Add("api_version", `9.50.0`)
+	params.Add("app_version", `2.83.0`)
+	params.Add("applet_source", ``)
+	params.Add("channel", `applet`)
+	params.Add("app_client_id", `4`)
+	params.Add("device_token", `WHJMrwNw1k/FKPjcOOgRd+Ed/O2S3GOkz07Wa1UPcfbDL2PfhzepFdBa/QF9u539PLLYm6SKU+84w6mApK0aXmA9Vne9MFdf+dCW1tldyDzmauSxIJm5Txg==1487582755342`)
 
-	return urlForm
+	// me
+	params.Add("sharer_uid", ``)
+	params.Add("s_id", `4606726bbe6337d4094e1dec808431d9`)
+	params.Add("openid", `osP8I0RgncVIhrJLWwUCb0gi9uDQ`)
+	params.Add("h5_source", ``)
+	t := strconv.FormatInt(time.Now().Unix(), 10)
+	params.Add("time", t)
+
+	return params
 }
 
-func (api *API) do(req *http.Request, data interface{}) error {
+func (api *API) do(req *http.Request, form url.Values, data interface{}) error {
+	if form != nil {
+		var m = make(map[string]string)
+		for k, v := range form {
+			m[k] = v[0]
+		}
+
+		signResult, err := api.signer.Sign(m)
+		if err != nil {
+			return err
+		}
+
+		form.Set("nars", signResult.Nars)
+		form.Set("sesi", signResult.Sesi)
+
+		req.Body = io.NopCloser(strings.NewReader(form.Encode()))
+	}
+
 	resp, err := api.client.Do(req)
 	if err != nil {
 		return err
