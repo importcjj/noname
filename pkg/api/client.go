@@ -417,7 +417,7 @@ func (api *API) newURLEncodedForm() url.Values {
 	urlForm.Set("nars", "56407491c74fbf56ee5332ca4481b2ff")
 	urlForm.Set("sesi", "USr1yiV1101ab91c733a3b3ade5e385c723008c")
 	urlForm.Set("device_token", "WHJMrwNw1k/FKPjcOOgRd+FFkJ4k/dvcXVSNUCOAxsMTu/xyJRcTbBCUmIXEs+qJX5NhJWTdLRMcTiw6M7u7LtF7s9NNXnvnbdCW1tldyDzmauSxIJm5Txg==1487582755342")
-	urlForm.Set("s_id", "ba3a2a736c0d1e23201e13ee38093385")
+	urlForm.Set("s_id", "4606726bbe6337d4094e1dec808431d9")
 	urlForm.Set("sharer_uid", "")
 	urlForm.Set("longitude", "121.409128")
 	urlForm.Set("latitude", "31.306508")
