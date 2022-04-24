@@ -5,7 +5,8 @@ import "encoding/json"
 type Response struct {
 	Success bool            `json:"success"`
 	Code    interface{}     `json:"code"`
-	Message string          `json:"msg"`
+	Msg     string          `json:"msg"`
+	Message string          `json:"message"`
 	Data    json.RawMessage `json:"data"`
 }
 

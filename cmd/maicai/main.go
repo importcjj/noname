@@ -102,12 +102,13 @@ func main() {
 	var stationId string
 	var addressId string
 	for _, address := range userAddress.ValidAddress {
-		if address.IsDefault {
-			stationId = address.StationID
-			addressId = address.ID
-			log.Printf("[%s] %s", address.StationInfo.CityName, address.Location.Address)
-			break
-		}
+
+		// if address.IsDefault {
+		stationId = address.StationID
+		addressId = address.ID
+		log.Printf("[%s] %s", address.StationInfo.CityName, address.Location.Address)
+		break
+		// }
 
 	}
 

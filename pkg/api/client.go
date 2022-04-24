@@ -1,9 +1,12 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -142,12 +145,11 @@ func (api *API) GetMultiReverseTime(stationId, addressId string, products []Prod
 	}
 
 	params := api.newURLEncodedForm()
+	params.Add("station_id", stationId)
 	params.Add("address_id", addressId)
 	params.Add("group_config_id", ``)
 	params.Add("products", `[[{"type":1,"id":"612cc0982c34fab505117d4e","price":"828.00","count":1,"description":"","sizes":[],"cart_id":"612cc0982c34fab505117d4e","parent_id":"","parent_batch_type":-1,"category_path":"","manage_category_path":"411,412,413","activity_id":"","sku_activity_id":"","conditions_num":"","product_name":"洋河蓝色经典梦之蓝M6+52度白酒 550ml/瓶","product_type":0,"small_image":"https://ddfs-public.ddimg.mobi/img/blind/product-management/202108/1242efbb2a37470aa081683513fb3677.jpg?width=800&height=800","total_price":"828.00","origin_price":"828.00","total_origin_price":"828.00","no_supplementary_price":"828.00","no_supplementary_total_price":"828.00","size_price":"0.00","buy_limit":0,"price_type":0,"promotion_num":0,"instant_rebate_money":"0.00","is_invoice":1,"sub_list":[],"is_booking":0,"is_bulk":0,"view_total_weight":"瓶","net_weight":"550","net_weight_unit":"ml","storage_value_id":0,"temperature_layer":"","sale_batches":{"batch_type":-1},"is_shared_station_product":0,"is_gift":0,"supplementary_list":[],"order_sort":1,"is_presale":0}]]`)
 	params.Add("isBridge", `false`)
-	// params.Add("nars", `f109a4692e2ce8404d3a2a96f0a3b199`)
-	// params.Add("sesi", `RYx3k3E6cacc851110cf3c3063dc18b383f75aa`)
 
 	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/order/getMultiReserveTime")
 	if err != nil {
@@ -348,6 +350,8 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 	}
 
 	var params = api.newURLEncodedForm()
+	params.Add("station_id", stationId)
+
 	params.Set("showMsg", "false")
 	params.Set("showData", "true")
 	params.Set("ab_config", `{"key_onion": "C"}`)
@@ -367,7 +371,7 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 	header.Set("ddmc-station-id", stationId)
 	request.Header = header
 	var addNewOrder = new(AddNewOrder)
-	err = api.do(request, params, addNewOrder)
+	err = api.do(request, params, addNewOrder, true)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +410,6 @@ func (api *API) newURLEncodedForm() url.Values {
 	params.Add("uid", `5db2faa481eef77f04ab13e1`)
 	params.Add("longitude", `121.409128`)
 	params.Add("latitude", `31.306508`)
-	params.Add("station_id", `5bc5a799716de1a94f8b6fb4`)
 	params.Add("city_number", `0101`)
 	params.Add("api_version", `9.50.0`)
 	params.Add("app_version", `2.83.0`)
@@ -426,7 +429,11 @@ func (api *API) newURLEncodedForm() url.Values {
 	return params
 }
 
-func (api *API) do(req *http.Request, form url.Values, data interface{}) error {
+func debugMode(debug ...bool) bool {
+	return len(debug) > 0 && debug[0]
+}
+
+func (api *API) do(req *http.Request, form url.Values, data interface{}, debug ...bool) error {
 	if form != nil {
 		var m = make(map[string]string)
 		for k, v := range form {
@@ -441,6 +448,11 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}) error {
 		form.Set("nars", signResult.Nars)
 		form.Set("sesi", signResult.Sesi)
 
+		if debugMode(debug...) {
+			log.Println(m)
+			log.Println(signResult)
+		}
+
 		req.Body = io.NopCloser(strings.NewReader(form.Encode()))
 	}
 
@@ -451,12 +463,22 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}) error {
 
 	defer resp.Body.Close()
 
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if debugMode(debug...) {
+		log.Println(string(body))
+	}
+
 	var response Response
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	if err := json.NewDecoder(bytes.NewReader(body)).Decode(&response); err != nil {
 		return err
 	}
 
 	if !response.Success {
+		log.Println(string(body))
 		return NewResponseError(response.Code, response.Message)
 	}
 
