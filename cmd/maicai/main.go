@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -43,11 +44,11 @@ func (cart *Cart) Get() *api.CartInfo {
 	return cart.cart
 }
 
-func intervalUpdateCart(stationId string, ddapi *api.API) {
+func intervalUpdateCart(ddapi *api.API) {
 
 	for {
 		log.Println("正在更新购物车详情...")
-		cart, err := ddapi.Cart(stationId)
+		cart, err := ddapi.Cart()
 		if err != nil {
 			log.Println("购物车获取失败", err)
 		} else {
@@ -60,7 +61,7 @@ func intervalUpdateCart(stationId string, ddapi *api.API) {
 					if item.IsCheck == 1 {
 						continue
 					}
-					cart, err = ddapi.UpdateCheck(stationId, item.ID, item.CartID)
+					cart, err = ddapi.UpdateCheck(item.ID, item.CartID)
 					if err != nil {
 						log.Println(err)
 					} else {
@@ -99,21 +100,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var stationId string
-	var addressId string
+	var inAddress api.Address
 	for _, address := range userAddress.ValidAddress {
 
 		// if address.IsDefault {
-		stationId = address.StationID
-		addressId = address.ID
+		inAddress = address
 		log.Printf("[%s] %s", address.StationInfo.CityName, address.Location.Address)
 		break
 		// }
 
 	}
 
+	ddapi.SetAddress(inAddress)
+	ddapi.SetDebugTime("1650809830")
+
 	// 定期更新购物车
-	go intervalUpdateCart(stationId, ddapi)
+	go intervalUpdateCart(ddapi)
 
 	log.Println("开始运行...")
 	var reserveTime api.ReserveTime
@@ -127,7 +129,7 @@ CheckTime:
 			continue
 		}
 
-		times, err := ddapi.GetMultiReverseTime(stationId, addressId, cart.NewOrderProductList[0].Products)
+		times, err := ddapi.GetMultiReverseTime(cart.NewOrderProductList[0].Products)
 		if err != nil {
 			log.Println("获取运力失败", err)
 		} else {
@@ -155,20 +157,28 @@ MakeOrder:
 		goto CheckTime
 	}
 
-	checkOrder, err := ddapi.CheckOrder(stationId, addressId, cart.NewOrderProductList[0])
+	checkOrder, err := ddapi.CheckOrder(cart.NewOrderProductList[0])
 	if err != nil {
 		log.Println("检查订单失败", err)
 		goto CheckTime
 	}
 
-	order, err := ddapi.AddNewOrder(stationId, addressId, api.PayTypeAlipay, cart, reserveTime, checkOrder)
+	order, err := ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
 	if err != nil {
 		log.Println("下单失败", err)
-		goto CheckTime
+		return
 	}
 
 	log.Println("下单成功", order)
 	dingdingbot.Send(context.Background(), "下单成功, 请付款")
 
-	goto CheckTime
+	var continueY string
+	fmt.Println("是否继续[y]?")
+	fmt.Scanln(&continueY)
+
+	if continueY == "y" {
+		goto CheckTime
+	}
+
+	log.Println("停止运行并退出")
 }

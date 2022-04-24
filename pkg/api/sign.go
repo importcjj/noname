@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
 	"io/ioutil"
 
@@ -44,14 +43,6 @@ func NewSigner(jsFile string) (*Signer, error) {
 }
 
 func (s *Signer) Sign(body interface{}) (*SignResult, error) {
-	var buf = bytes.NewBuffer(nil)
-	encoder := json.NewEncoder(buf)
-	encoder.SetEscapeHTML(false)
-	err := encoder.Encode(body)
-	if err != nil {
-		return nil, err
-	}
-
 	ret, err := s.signFunc(goja.Undefined(), s.vm.ToValue(body))
 	if err != nil {
 		return nil, err

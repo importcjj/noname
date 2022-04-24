@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -22,6 +23,9 @@ type API struct {
 	signer *Signer
 
 	ddmcUid string
+
+	address   *Address
+	debugTime string
 }
 
 func NewAPI(cookie string) (*API, error) {
@@ -41,8 +45,36 @@ func NewAPI(cookie string) (*API, error) {
 	}, nil
 }
 
-func (api *API) UserDetail() (*UserDetail, error) {
+func (api *API) SetAddress(address Address) *API {
+	api.address = &address
+	return api
+}
 
+func (api *API) SetDebugTime(time string) *API {
+	api.debugTime = time
+	return api
+}
+
+func (api *API) getTime() string {
+	if len(api.debugTime) > 0 {
+		return api.debugTime
+	}
+
+	return strconv.FormatInt(time.Now().Unix(), 10)
+}
+
+func (api *API) getLocation() ([]string, error) {
+	if api.address == nil {
+		return nil, errors.New("请先使用SetAddress设置地址")
+	}
+
+	return []string{
+		fmt.Sprint(api.address.Location.Location[0]),
+		fmt.Sprint(api.address.Location.Location[1]),
+	}, nil
+}
+
+func (api *API) UserDetail() (*UserDetail, error) {
 	url, err := url.ParseRequestURI("https://sunquan.api.ddxq.mobi/api/v1/user/detail/")
 	if err != nil {
 		return nil, err
@@ -61,7 +93,11 @@ func (api *API) UserDetail() (*UserDetail, error) {
 		return nil, err
 	}
 
-	var header = api.newHeader()
+	var header = api.newBaseHeader()
+	if err != nil {
+		return nil, err
+	}
+
 	header.Set("host", "sunquan.api.ddxq.mobi")
 	request.Header = header
 
@@ -94,7 +130,11 @@ func (api *API) UserAddress() (*UserAddress, error) {
 	if err != nil {
 		return nil, err
 	}
-	var header = api.newHeader()
+	header, err := api.newHeader()
+	if err != nil {
+		return nil, err
+	}
+
 	header.Set("host", "sunquan.api.ddxq.mobi")
 	request.Header = header
 	var address = new(UserAddress)
@@ -106,14 +146,18 @@ func (api *API) UserAddress() (*UserAddress, error) {
 	return address, nil
 }
 
-func (api *API) Cart(stationId string) (*CartInfo, error) {
+func (api *API) Cart() (*CartInfo, error) {
+	if api.address == nil {
+		return nil, errors.New("需先使用SetAddress绑定地址信息")
+	}
+
 	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/cart/index")
 	if err != nil {
 		return nil, err
 	}
 
 	var query = url.Query()
-	query.Set("station_id", stationId)
+	query.Set("station_id", api.address.StationInfo.ID)
 	query.Set("is_load", "1")
 	query.Set("api_version", "9.50.0")
 	query.Set("app_version", "2.83.0")
@@ -127,7 +171,10 @@ func (api *API) Cart(stationId string) (*CartInfo, error) {
 		return nil, err
 	}
 
-	var header = api.newHeader()
+	header, err := api.newHeader()
+	if err != nil {
+		return nil, err
+	}
 	request.Header = header
 	var cart = new(CartInfo)
 	err = api.do(request, nil, cart)
@@ -138,18 +185,22 @@ func (api *API) Cart(stationId string) (*CartInfo, error) {
 	return cart, nil
 }
 
-func (api *API) GetMultiReverseTime(stationId, addressId string, products []ProductListItem) (*MultiReserveTime, error) {
-	_, err := json.Marshal([]interface{}{products})
+func (api *API) GetMultiReverseTime(products []ProductListItem) (*MultiReserveTime, error) {
+	if api.address == nil {
+		return nil, errors.New("需先使用SetAddress绑定地址信息")
+	}
+
+	data, err := json.Marshal([]interface{}{products})
 	if err != nil {
 		return nil, err
 	}
 
 	params := api.newURLEncodedForm()
-	params.Add("station_id", stationId)
-	params.Add("address_id", addressId)
-	params.Add("group_config_id", ``)
-	params.Add("products", `[[{"type":1,"id":"612cc0982c34fab505117d4e","price":"828.00","count":1,"description":"","sizes":[],"cart_id":"612cc0982c34fab505117d4e","parent_id":"","parent_batch_type":-1,"category_path":"","manage_category_path":"411,412,413","activity_id":"","sku_activity_id":"","conditions_num":"","product_name":"洋河蓝色经典梦之蓝M6+52度白酒 550ml/瓶","product_type":0,"small_image":"https://ddfs-public.ddimg.mobi/img/blind/product-management/202108/1242efbb2a37470aa081683513fb3677.jpg?width=800&height=800","total_price":"828.00","origin_price":"828.00","total_origin_price":"828.00","no_supplementary_price":"828.00","no_supplementary_total_price":"828.00","size_price":"0.00","buy_limit":0,"price_type":0,"promotion_num":0,"instant_rebate_money":"0.00","is_invoice":1,"sub_list":[],"is_booking":0,"is_bulk":0,"view_total_weight":"瓶","net_weight":"550","net_weight_unit":"ml","storage_value_id":0,"temperature_layer":"","sale_batches":{"batch_type":-1},"is_shared_station_product":0,"is_gift":0,"supplementary_list":[],"order_sort":1,"is_presale":0}]]`)
-	params.Add("isBridge", `false`)
+	params.Set("station_id", api.address.StationInfo.ID)
+	params.Set("address_id", api.address.ID)
+	params.Set("group_config_id", ``)
+	params.Set("products", string(data))
+	params.Set("isBridge", `false`)
 
 	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/order/getMultiReserveTime")
 	if err != nil {
@@ -161,8 +212,10 @@ func (api *API) GetMultiReverseTime(stationId, addressId string, products []Prod
 		return nil, err
 	}
 
-	var header = api.newHeader()
-	header.Set("ddmc-station-id", stationId)
+	header, err := api.newHeader()
+	if err != nil {
+		return nil, err
+	}
 
 	request.Header = header
 	var times = new(MultiReserveTime)
@@ -174,7 +227,7 @@ func (api *API) GetMultiReverseTime(stationId, addressId string, products []Prod
 	return times, nil
 }
 
-func (api *API) UpdateCheck(stationId string, productId string, cartId string) (*CartInfo, error) {
+func (api *API) UpdateCheck(productId string, cartId string) (*CartInfo, error) {
 
 	var data = struct {
 		ID      string     `json:"id"`
@@ -194,7 +247,6 @@ func (api *API) UpdateCheck(stationId string, productId string, cartId string) (
 	}
 
 	var urlForm = api.newURLEncodedForm()
-	urlForm.Set("station_id", stationId)
 	urlForm.Set("product", string(packagesData))
 	urlForm.Set("is_load", "1")
 	urlForm.Set("ab_config", `{"key_onion":"D","key_cart_discount_price":"C"}`)
@@ -209,8 +261,11 @@ func (api *API) UpdateCheck(stationId string, productId string, cartId string) (
 		return nil, err
 	}
 
-	var header = api.newHeader()
-	header.Set("ddmc-station-id", stationId)
+	header, err := api.newHeader()
+	if err != nil {
+		return nil, err
+	}
+
 	request.Header = header
 	var cart = new(CartInfo)
 	err = api.do(request, urlForm, cart)
@@ -221,7 +276,7 @@ func (api *API) UpdateCheck(stationId string, productId string, cartId string) (
 	return cart, nil
 }
 
-func (api *API) CheckOrder(stationId, addressId string, productList ProductList) (*CheckOrder, error) {
+func (api *API) CheckOrder(productList ProductList) (*CheckOrder, error) {
 	if len(productList.Products) == 0 {
 		return nil, errors.New("没有可购买商品")
 	}
@@ -250,8 +305,6 @@ func (api *API) CheckOrder(stationId, addressId string, productList ProductList)
 	}
 
 	var urlForm = api.newURLEncodedForm()
-	urlForm.Set("station_id", stationId)
-	urlForm.Set("address_id", addressId)
 	urlForm.Set("user_ticket_id", "default")
 	urlForm.Set("freight_ticket_id", "default")
 	urlForm.Set("is_use_point", "0")
@@ -271,8 +324,11 @@ func (api *API) CheckOrder(stationId, addressId string, productList ProductList)
 		return nil, err
 	}
 
-	var header = api.newHeader()
-	header.Set("ddmc-station-id", stationId)
+	header, err := api.newHeader()
+	if err != nil {
+		return nil, err
+	}
+
 	request.Header = header
 	var checkOrder = new(CheckOrder)
 	err = api.do(request, urlForm, checkOrder)
@@ -283,7 +339,11 @@ func (api *API) CheckOrder(stationId, addressId string, productList ProductList)
 	return checkOrder, nil
 }
 
-func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *CartInfo, reserveTime ReserveTime, checkOrder *CheckOrder) (*AddNewOrder, error) {
+func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime ReserveTime, checkOrder *CheckOrder) (*AddNewOrder, error) {
+	if api.address == nil {
+		return nil, errors.New("需先使用SetAddress绑定地址信息")
+	}
+
 	var payment = struct {
 		ReservedTimeStart    int64       `json:"reserved_time_start"`
 		ReservedTimeEnd      int64       `json:"reserved_time_end"`
@@ -306,7 +366,7 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 		ReservedTimeStart:    reserveTime.StartTimestamp,
 		ReservedTimeEnd:      reserveTime.EndTimestamp,
 		ParentOrderSign:      cartInfo.ParentOrderInfo.ParentOrderSign,
-		AddressID:            addressId,
+		AddressID:            api.address.ID,
 		PayType:              payType,
 		ProductType:          1,
 		FormID:               strings.ReplaceAll(uuid.New().String(), "-", ""),
@@ -320,6 +380,10 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 		FreightMoney:         checkOrder.Order.FreightMoney,
 		OrderFreight:         checkOrder.Order.Freights[0].Freight.FreightRealMoney,
 		UserTicketID:         checkOrder.Order.DefaultCoupon.ID,
+	}
+
+	if len(payment.FreightDiscountMoney) == 0 {
+		payment.FreightDiscountMoney = "0.00"
 	}
 
 	var pkg = struct {
@@ -345,12 +409,13 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 		"packages":      []interface{}{pkg},
 	})
 
+	fmt.Println(string(data))
+
 	if err != nil {
 		return nil, err
 	}
 
 	var params = api.newURLEncodedForm()
-	params.Add("station_id", stationId)
 
 	params.Set("showMsg", "false")
 	params.Set("showData", "true")
@@ -367,8 +432,15 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 		return nil, err
 	}
 
-	var header = api.newHeader()
-	header.Set("ddmc-station-id", stationId)
+	header, err := api.newHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range header {
+		fmt.Println(k, "    ", v[0])
+	}
+
 	request.Header = header
 	var addNewOrder = new(AddNewOrder)
 	err = api.do(request, params, addNewOrder, true)
@@ -379,52 +451,78 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 	return addNewOrder, nil
 }
 
-func (api *API) newHeader() http.Header {
+func (api *API) newBaseHeader() http.Header {
+
 	header := http.Header{}
 	header.Set("host", "maicai.api.ddxq.mobi")
-	header.Set("Cookie", api.Cookie)
-	header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36 MicroMessenger/7.0.9.501 NetType/WIFI MiniProgramEnv/Windows WindowsWechat")
+	header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E217 MicroMessenger/6.8.0(0x16080000) NetType/WIFI Language/en Branch/Br_trunk MiniProgramEnv/Mac")
 	header.Set("content-type", "application/x-www-form-urlencoded")
 	header.Set("Referer", "https://servicewechat.com/wx1e113254eda17715/425/page-frame.html")
 
 	header.Set("ddmc-api-version", "9.50.0")
 	header.Set("ddmc-app-client-id", "4")
-	header.Set("ddmc-app-version", "2.83.0")
+	header.Set("ddmc-build-version", "2.83.0")
 	header.Set("ddmc-channel", "applet")
-	header.Set("ddmc-latitude", "23.109281")
+	header.Set("ddmc-os-version", "[object Undefined]")
+
 	header.Set("ddmc-ip", "")
+	header.Set("ddmc-time", api.getTime())
 
 	header.Set("ddmc-device-id", "osP8I0RgncVIhrJLWwUCb0gi9uDQ")
-	header.Set("ddmc-longitude", "113.415302")
-	header.Set("ddmc-os-version", "[object Undefined]")
-	header.Set("ddmc-time", strconv.FormatInt(time.Now().Unix(), 10))
-	if len(api.ddmcUid) > 0 {
-		header.Set("ddmc-uid", api.ddmcUid)
-	}
+	header.Set("Cookie", api.Cookie)
 
 	return header
 }
 
+func (api *API) newHeader() (http.Header, error) {
+	header := api.newBaseHeader()
+
+	if len(api.ddmcUid) == 0 {
+		return nil, errors.New("用户id未设置")
+	}
+
+	if len(api.ddmcUid) > 0 {
+		header.Set("ddmc-uid", api.ddmcUid)
+	}
+
+	if api.address != nil {
+		header.Set("ddmc-station-id", api.address.StationInfo.ID)
+		header.Set("ddmc-city-number", api.address.StationInfo.CityNumber)
+
+		location, _ := api.getLocation()
+		header.Set("ddmc-longitude", location[0])
+		header.Set("ddmc-latitude", location[1])
+	}
+
+	return header, nil
+}
+
 func (api *API) newURLEncodedForm() url.Values {
 	var params = url.Values{}
-	params.Add("uid", `5db2faa481eef77f04ab13e1`)
-	params.Add("longitude", `121.409128`)
-	params.Add("latitude", `31.306508`)
-	params.Add("city_number", `0101`)
-	params.Add("api_version", `9.50.0`)
-	params.Add("app_version", `2.83.0`)
-	params.Add("applet_source", ``)
-	params.Add("channel", `applet`)
-	params.Add("app_client_id", `4`)
-	params.Add("device_token", `WHJMrwNw1k/FKPjcOOgRd+Ed/O2S3GOkz07Wa1UPcfbDL2PfhzepFdBa/QF9u539PLLYm6SKU+84w6mApK0aXmA9Vne9MFdf+dCW1tldyDzmauSxIJm5Txg==1487582755342`)
+	params.Set("uid", `5db2faa481eef77f04ab13e1`)
+
+	params.Set("city_number", `0101`)
+	params.Set("api_version", `9.50.0`)
+	params.Set("app_version", `2.83.0`)
+	params.Set("applet_source", ``)
+	params.Set("channel", `applet`)
+	params.Set("app_client_id", `4`)
+	params.Set("device_token", `WHJMrwNw1k/FKPjcOOgRd+Ed/O2S3GOkz07Wa1UPcfbDL2PfhzepFdBa/QF9u539PLLYm6SKU+84w6mApK0aXmA9Vne9MFdf+dCW1tldyDzmauSxIJm5Txg==1487582755342`)
 
 	// me
-	params.Add("sharer_uid", ``)
-	params.Add("s_id", `4606726bbe6337d4094e1dec808431d9`)
-	params.Add("openid", `osP8I0RgncVIhrJLWwUCb0gi9uDQ`)
-	params.Add("h5_source", ``)
-	t := strconv.FormatInt(time.Now().Unix(), 10)
-	params.Add("time", t)
+	params.Set("sharer_uid", ``)
+	params.Set("s_id", `4606726bbe6337d4094e1dec808431d9`)
+	params.Set("openid", `osP8I0RgncVIhrJLWwUCb0gi9uDQ`)
+	params.Set("h5_source", ``)
+	params.Set("time", api.getTime())
+
+	if api.address != nil {
+		params.Set("station_id", api.address.StationInfo.ID)
+		params.Set("city_number", api.address.StationInfo.CityNumber)
+		location, _ := api.getLocation()
+		params.Set("longitude", location[0])
+		params.Set("latitude", location[1])
+	}
 
 	return params
 }
@@ -435,7 +533,7 @@ func debugMode(debug ...bool) bool {
 
 func (api *API) do(req *http.Request, form url.Values, data interface{}, debug ...bool) error {
 	if form != nil {
-		var m = make(map[string]string)
+		var m = make(map[string]interface{})
 		for k, v := range form {
 			m[k] = v[0]
 		}
@@ -449,7 +547,6 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}, debug .
 		form.Set("sesi", signResult.Sesi)
 
 		if debugMode(debug...) {
-			log.Println(m)
 			log.Println(signResult)
 		}
 
@@ -468,10 +565,6 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}, debug .
 		return err
 	}
 
-	if debugMode(debug...) {
-		log.Println(string(body))
-	}
-
 	var response Response
 	if err := json.NewDecoder(bytes.NewReader(body)).Decode(&response); err != nil {
 		return err
@@ -480,6 +573,8 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}, debug .
 	if !response.Success {
 		log.Println(string(body))
 		return NewResponseError(response.Code, response.Message)
+	} else if debugMode(debug...) {
+		log.Println(string(body))
 	}
 
 	return json.Unmarshal(response.Data, data)
