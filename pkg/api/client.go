@@ -409,8 +409,6 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 		"packages":      []interface{}{pkg},
 	})
 
-	fmt.Println(string(data))
-
 	if err != nil {
 		return nil, err
 	}
@@ -435,10 +433,6 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 	header, err := api.newHeader()
 	if err != nil {
 		return nil, err
-	}
-
-	for k, v := range header {
-		fmt.Println(k, "    ", v[0])
 	}
 
 	request.Header = header
