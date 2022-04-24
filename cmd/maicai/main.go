@@ -173,10 +173,10 @@ MakeOrder:
 	dingdingbot.Send(context.Background(), "下单成功, 请付款")
 
 	var continueY string
-	fmt.Println("是否继续[y]?")
+	fmt.Println("是否退出[y/n]?")
 	fmt.Scanln(&continueY)
 
-	if continueY == "y" {
+	if continueY == "n" {
 		goto CheckTime
 	}
 
