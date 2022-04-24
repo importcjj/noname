@@ -142,7 +142,7 @@ func (api *API) GetMultiReverseTime(stationId, addressId string, products []Prod
 	}
 
 	params := api.newURLEncodedForm()
-	params.Add("address_id", `5e5e2c4bc7316f7d8cc20828`)
+	params.Add("address_id", addressId)
 	params.Add("group_config_id", ``)
 	params.Add("products", `[[{"type":1,"id":"612cc0982c34fab505117d4e","price":"828.00","count":1,"description":"","sizes":[],"cart_id":"612cc0982c34fab505117d4e","parent_id":"","parent_batch_type":-1,"category_path":"","manage_category_path":"411,412,413","activity_id":"","sku_activity_id":"","conditions_num":"","product_name":"洋河蓝色经典梦之蓝M6+52度白酒 550ml/瓶","product_type":0,"small_image":"https://ddfs-public.ddimg.mobi/img/blind/product-management/202108/1242efbb2a37470aa081683513fb3677.jpg?width=800&height=800","total_price":"828.00","origin_price":"828.00","total_origin_price":"828.00","no_supplementary_price":"828.00","no_supplementary_total_price":"828.00","size_price":"0.00","buy_limit":0,"price_type":0,"promotion_num":0,"instant_rebate_money":"0.00","is_invoice":1,"sub_list":[],"is_booking":0,"is_bulk":0,"view_total_weight":"瓶","net_weight":"550","net_weight_unit":"ml","storage_value_id":0,"temperature_layer":"","sale_batches":{"batch_type":-1},"is_shared_station_product":0,"is_gift":0,"supplementary_list":[],"order_sort":1,"is_presale":0}]]`)
 	params.Add("isBridge", `false`)
@@ -347,9 +347,11 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 		return nil, err
 	}
 
-	var urlForm = api.newURLEncodedForm()
-	urlForm.Set("station_id", stationId)
-	urlForm.Set("package_order", string(data))
+	var params = api.newURLEncodedForm()
+	params.Set("showMsg", "false")
+	params.Set("showData", "true")
+	params.Set("ab_config", `{"key_onion": "C"}`)
+	params.Set("package_order", string(data))
 
 	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/order/addNewOrder")
 	if err != nil {
@@ -365,7 +367,7 @@ func (api *API) AddNewOrder(stationId, addressId string, payType int, cartInfo *
 	header.Set("ddmc-station-id", stationId)
 	request.Header = header
 	var addNewOrder = new(AddNewOrder)
-	err = api.do(request, urlForm, addNewOrder)
+	err = api.do(request, params, addNewOrder)
 	if err != nil {
 		return nil, err
 	}
