@@ -20,6 +20,7 @@ var (
 	deviceID     = flag.String("device_id", "", "抓包小程序可得")
 	deviceToken  = flag.String("device_token", "", "抓包小程序可得")
 	ua           = flag.String("ua", "", "User-Agent, 抓包小程序可得")
+	boostMode    = flag.Bool("boost", false, "彻底疯狂！！！！！")
 )
 
 var globalCart = NewCart()
@@ -79,7 +80,7 @@ func intervalUpdateCart(ddapi *api.API) {
 			globalCart.Set(cart)
 		}
 
-		time.Sleep(1 * time.Minute)
+		time.Sleep(2 * time.Minute)
 	}
 }
 
@@ -129,16 +130,25 @@ func main() {
 	go intervalUpdateCart(ddapi)
 
 	log.Println("开始运行...")
+	if *boostMode {
+		log.Println("注意！boost模式已启动，到时我将彻底疯狂！！！")
+	}
+
 	var reserveTime api.ReserveTime
 
 CheckTime:
 
 	for {
+		// boost模式非疯狂时间不请求接口
+		if *boostMode && !boostTime() {
+			continue
+		}
 
 		cart := globalCart.Get()
 		if len(cart.NewOrderProductList) == 0 {
 			continue
 		}
+
 		times, err := ddapi.GetMultiReverseTime(cart.NewOrderProductList[0].Products)
 		if err != nil {
 			log.Println("获取运力失败", err)
@@ -158,7 +168,13 @@ CheckTime:
 
 			log.Println("当前暂无可用运力...")
 		}
-		time.Sleep(2000 * time.Millisecond)
+
+		if boostTime() {
+			time.Sleep(1000 * time.Millisecond)
+		} else {
+			time.Sleep(2000 * time.Millisecond)
+		}
+
 	}
 
 MakeOrder:
@@ -193,4 +209,18 @@ MakeOrder:
 	}
 
 	log.Println("停止运行并退出")
+}
+
+func boostTime() bool {
+
+	now := time.Now()
+	if now.Hour() == 6 && now.Minute() < 5 {
+		return true
+	}
+
+	if now.Hour() == 8 && now.Minute() > 30 && now.Minute() < 35 {
+		return true
+	}
+
+	return false
 }
