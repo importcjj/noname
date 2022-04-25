@@ -139,7 +139,6 @@ CheckTime:
 		if len(cart.NewOrderProductList) == 0 {
 			continue
 		}
-		log.Println("正在检查运力...")
 		times, err := ddapi.GetMultiReverseTime(cart.NewOrderProductList[0].Products)
 		if err != nil {
 			log.Println("获取运力失败", err)
@@ -156,6 +155,8 @@ CheckTime:
 					}
 				}
 			}
+
+			log.Println("当前暂无可用运力...")
 		}
 		time.Sleep(2000 * time.Millisecond)
 	}
@@ -164,7 +165,7 @@ MakeOrder:
 	log.Println("开始自动下单...")
 	cart := globalCart.Get()
 	if len(cart.NewOrderProductList) == 0 {
-		log.Println("购物车内无可购买商品, 终止下单")
+		log.Println("购物车内无可购买商品, 终止下单...")
 		goto CheckTime
 	}
 
