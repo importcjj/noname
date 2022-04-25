@@ -132,14 +132,14 @@ func main() {
 	var reserveTime api.ReserveTime
 
 CheckTime:
-	log.Println("正在检查运力...")
+
 	for {
 
 		cart := globalCart.Get()
 		if len(cart.NewOrderProductList) == 0 {
 			continue
 		}
-
+		log.Println("正在检查运力...")
 		times, err := ddapi.GetMultiReverseTime(cart.NewOrderProductList[0].Products)
 		if err != nil {
 			log.Println("获取运力失败", err)
@@ -157,7 +157,7 @@ CheckTime:
 				}
 			}
 		}
-		time.Sleep(1500 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond)
 	}
 
 MakeOrder:
