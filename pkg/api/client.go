@@ -22,6 +22,8 @@ type API struct {
 	client *http.Client
 	signer *Signer
 
+	ddmcAPIVersion  string
+	ddmcAPPVersion  string
 	ddmcUA          string
 	ddmcUid         string //自动设置
 	ddmcSID         string // 抓包可得
@@ -47,6 +49,8 @@ func NewAPI(cookie string) (*API, error) {
 		Cookie:          cookie,
 		client:          http.DefaultClient,
 		signer:          signer,
+		ddmcAPIVersion:  "9.50.1",
+		ddmcAPPVersion:  "2.85.2",
 		ddmcUA:          `Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E217 MicroMessenger/6.8.0(0x16080000) NetType/WIFI Language/en Branch/Br_trunk MiniProgramEnv/Mac`,
 		ddmcSID:         `4606726bbe6337d4094e1dec808431d9`,
 		ddmcOpenID:      `osP8I0RgncVIhrJLWwUCb0gi9uDQ`,
@@ -502,9 +506,9 @@ func (api *API) newBaseHeader() http.Header {
 	header.Set("content-type", "application/x-www-form-urlencoded")
 	header.Set("Referer", "https://servicewechat.com/wx1e113254eda17715/425/page-frame.html")
 
-	header.Set("ddmc-api-version", "9.50.0")
+	header.Set("ddmc-api-version", api.ddmcAPIVersion)
 	header.Set("ddmc-app-client-id", "4")
-	header.Set("ddmc-build-version", "2.83.0")
+	header.Set("ddmc-build-version", api.ddmcAPPVersion)
 	header.Set("ddmc-channel", "applet")
 	header.Set("ddmc-os-version", "[object Undefined]")
 
@@ -543,8 +547,8 @@ func (api *API) newHeader() (http.Header, error) {
 func (api *API) newURLEncodedForm() url.Values {
 	var params = url.Values{}
 
-	params.Set("api_version", `9.50.0`)
-	params.Set("app_version", `2.83.0`)
+	params.Set("api_version", api.ddmcAPIVersion)
+	params.Set("app_version", api.ddmcAPPVersion)
 	params.Set("applet_source", ``)
 	params.Set("channel", `applet`)
 	params.Set("app_client_id", `4`)
