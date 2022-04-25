@@ -493,9 +493,7 @@ func (api *API) newHeader() (http.Header, error) {
 
 func (api *API) newURLEncodedForm() url.Values {
 	var params = url.Values{}
-	params.Set("uid", `5db2faa481eef77f04ab13e1`)
 
-	params.Set("city_number", `0101`)
 	params.Set("api_version", `9.50.0`)
 	params.Set("app_version", `2.83.0`)
 	params.Set("applet_source", ``)
@@ -509,6 +507,10 @@ func (api *API) newURLEncodedForm() url.Values {
 	params.Set("openid", `osP8I0RgncVIhrJLWwUCb0gi9uDQ`)
 	params.Set("h5_source", ``)
 	params.Set("time", api.getTime())
+
+	if len(api.ddmcUid) > 0 {
+		params.Set("uid", api.ddmcUid)
+	}
 
 	if api.address != nil {
 		params.Set("station_id", api.address.StationInfo.ID)
