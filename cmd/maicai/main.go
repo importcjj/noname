@@ -112,7 +112,6 @@ func main() {
 	}
 
 	ddapi.SetAddress(inAddress)
-	ddapi.SetDebugTime("1650809830")
 
 	// 定期更新购物车
 	go intervalUpdateCart(ddapi)
