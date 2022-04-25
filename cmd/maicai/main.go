@@ -103,11 +103,11 @@ func main() {
 	var inAddress api.Address
 	for _, address := range userAddress.ValidAddress {
 
-		// if address.IsDefault {
-		inAddress = address
-		log.Printf("[%s] %s", address.StationInfo.CityName, address.Location.Address)
-		break
-		// }
+		if address.IsDefault {
+			inAddress = address
+			log.Printf("[%s] %s", address.StationInfo.CityName, address.Location.Address)
+			break
+		}
 
 	}
 
