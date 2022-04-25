@@ -22,6 +22,8 @@ type API struct {
 	client *http.Client
 	signer *Signer
 
+	ddmcChannel     string
+	ddmcClientID    string
 	ddmcAPIVersion  string
 	ddmcAPPVersion  string
 	ddmcUA          string
@@ -51,6 +53,8 @@ func NewAPI(cookie string) (*API, error) {
 		signer:          signer,
 		ddmcAPIVersion:  "9.50.1",
 		ddmcAPPVersion:  "2.85.2",
+		ddmcChannel:     "applet",
+		ddmcClientID:    "4",
 		ddmcUA:          `Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E217 MicroMessenger/6.8.0(0x16080000) NetType/WIFI Language/en Branch/Br_trunk MiniProgramEnv/Mac`,
 		ddmcSID:         `4606726bbe6337d4094e1dec808431d9`,
 		ddmcOpenID:      `osP8I0RgncVIhrJLWwUCb0gi9uDQ`,
@@ -507,9 +511,9 @@ func (api *API) newBaseHeader() http.Header {
 	header.Set("Referer", "https://servicewechat.com/wx1e113254eda17715/425/page-frame.html")
 
 	header.Set("ddmc-api-version", api.ddmcAPIVersion)
-	header.Set("ddmc-app-client-id", "4")
+	header.Set("ddmc-app-client-id", api.ddmcClientID)
 	header.Set("ddmc-build-version", api.ddmcAPPVersion)
-	header.Set("ddmc-channel", "applet")
+	header.Set("ddmc-channel", api.ddmcChannel)
 	header.Set("ddmc-os-version", "[object Undefined]")
 
 	header.Set("ddmc-ip", "")
@@ -550,8 +554,8 @@ func (api *API) newURLEncodedForm() url.Values {
 	params.Set("api_version", api.ddmcAPIVersion)
 	params.Set("app_version", api.ddmcAPPVersion)
 	params.Set("applet_source", ``)
-	params.Set("channel", `applet`)
-	params.Set("app_client_id", `4`)
+	params.Set("channel", api.ddmcChannel)
+	params.Set("app_client_id", api.ddmcClientID)
 	params.Set("device_token", api.ddmcDeviceToken)
 
 	// me
