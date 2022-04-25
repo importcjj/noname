@@ -17,6 +17,9 @@ var (
 	dingdinghook = flag.String("dingding", "", "钉钉机器人")
 	sid          = flag.String("sid", "", "抓包小程序可得")
 	openid       = flag.String("openid", "", "抓包小程序可得")
+	deviceID     = flag.String("device_id", "", "抓包小程序可得")
+	deviceToken  = flag.String("device_token", "", "抓包小程序可得")
+	ua           = flag.String("ua", "", "User-Agent, 抓包小程序可得")
 )
 
 var globalCart = NewCart()
@@ -90,8 +93,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ddapi.SetSID(*sid)
-	ddapi.SetOpenID(*openid)
+	ddapi.
+		SetSID(*sid).
+		SetOpenID(*openid).
+		SetDeviceID(*deviceID).
+		SetDeviceToken(*deviceToken).
+		SetUserAgent(*ua)
 
 	userDetail, err := ddapi.UserDetail()
 	if err != nil {
@@ -110,7 +117,7 @@ func main() {
 
 		if address.IsDefault {
 			inAddress = address
-			log.Printf("[%s] %s", address.StationInfo.CityName, address.Location.Address)
+			log.Printf("[%s] %s %s", address.StationInfo.CityName, address.Location.Address, address.AddrDetail)
 			break
 		}
 

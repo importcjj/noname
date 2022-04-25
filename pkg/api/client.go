@@ -22,9 +22,12 @@ type API struct {
 	client *http.Client
 	signer *Signer
 
-	ddmcUid    string
-	ddmcSID    string
-	ddmcOpenID string
+	ddmcUA          string
+	ddmcUid         string //自动设置
+	ddmcSID         string // 抓包可得
+	ddmcOpenID      string // 抓包可得
+	ddmcDeviceID    string // 抓包可得
+	ddmcDeviceToken string // 抓包可得
 
 	address   *Address
 	debugTime string
@@ -41,12 +44,23 @@ func NewAPI(cookie string) (*API, error) {
 	}
 
 	return &API{
-		Cookie:     cookie,
-		client:     http.DefaultClient,
-		signer:     signer,
-		ddmcSID:    `4606726bbe6337d4094e1dec808431d9`,
-		ddmcOpenID: `osP8I0RgncVIhrJLWwUCb0gi9uDQ`,
+		Cookie:          cookie,
+		client:          http.DefaultClient,
+		signer:          signer,
+		ddmcUA:          `Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E217 MicroMessenger/6.8.0(0x16080000) NetType/WIFI Language/en Branch/Br_trunk MiniProgramEnv/Mac`,
+		ddmcSID:         `4606726bbe6337d4094e1dec808431d9`,
+		ddmcOpenID:      `osP8I0RgncVIhrJLWwUCb0gi9uDQ`,
+		ddmcDeviceID:    `osP8I0RgncVIhrJLWwUCb0gi9uDQ`,
+		ddmcDeviceToken: `WHJMrwNw1k/FKPjcOOgRd+Ed/O2S3GOkz07Wa1UPcfbDL2PfhzepFdBa/QF9u539PLLYm6SKU+84w6mApK0aXmA9Vne9MFdf+dCW1tldyDzmauSxIJm5Txg==1487582755342`,
 	}, nil
+}
+
+func (api *API) SetUserAgent(ua string) *API {
+	if len(ua) > 0 {
+		api.ddmcUA = ua
+	}
+
+	return api
 }
 
 func (api *API) SetSID(sid string) *API {
@@ -61,6 +75,22 @@ func (api *API) SetOpenID(openid string) *API {
 	if len(openid) > 0 {
 		api.ddmcOpenID = openid
 	}
+	return api
+}
+
+func (api *API) SetDeviceID(id string) *API {
+	if len(id) > 0 {
+		api.ddmcDeviceID = id
+	}
+
+	return api
+}
+
+func (api *API) SetDeviceToken(token string) *API {
+	if len(token) > 0 {
+		api.ddmcDeviceToken = token
+	}
+
 	return api
 }
 
@@ -468,7 +498,7 @@ func (api *API) newBaseHeader() http.Header {
 
 	header := http.Header{}
 	header.Set("host", "maicai.api.ddxq.mobi")
-	header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E217 MicroMessenger/6.8.0(0x16080000) NetType/WIFI Language/en Branch/Br_trunk MiniProgramEnv/Mac")
+	header.Set("User-Agent", api.ddmcUA)
 	header.Set("content-type", "application/x-www-form-urlencoded")
 	header.Set("Referer", "https://servicewechat.com/wx1e113254eda17715/425/page-frame.html")
 
@@ -481,7 +511,7 @@ func (api *API) newBaseHeader() http.Header {
 	header.Set("ddmc-ip", "")
 	header.Set("ddmc-time", api.getTime())
 
-	header.Set("ddmc-device-id", "osP8I0RgncVIhrJLWwUCb0gi9uDQ")
+	header.Set("ddmc-device-id", api.ddmcDeviceID)
 	header.Set("Cookie", api.Cookie)
 
 	return header
@@ -518,7 +548,7 @@ func (api *API) newURLEncodedForm() url.Values {
 	params.Set("applet_source", ``)
 	params.Set("channel", `applet`)
 	params.Set("app_client_id", `4`)
-	params.Set("device_token", `WHJMrwNw1k/FKPjcOOgRd+Ed/O2S3GOkz07Wa1UPcfbDL2PfhzepFdBa/QF9u539PLLYm6SKU+84w6mApK0aXmA9Vne9MFdf+dCW1tldyDzmauSxIJm5Txg==1487582755342`)
+	params.Set("device_token", api.ddmcDeviceToken)
 
 	// me
 	params.Set("sharer_uid", ``)
