@@ -214,11 +214,11 @@ MakeOrder:
 func boostTime() bool {
 
 	now := time.Now()
-	if now.Hour() == 6 && now.Minute() < 5 {
+	if now.Hour() == 6 && now.Minute() <= 5 {
 		return true
 	}
 
-	if now.Hour() == 8 && now.Minute() > 30 && now.Minute() < 35 {
+	if now.Hour() == 8 && now.Minute() >= 30 && now.Minute() <= 35 {
 		return true
 	}
 
