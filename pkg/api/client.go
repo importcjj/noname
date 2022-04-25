@@ -22,7 +22,9 @@ type API struct {
 	client *http.Client
 	signer *Signer
 
-	ddmcUid string
+	ddmcUid    string
+	ddmcSID    string
+	ddmcOpenID string
 
 	address   *Address
 	debugTime string
@@ -39,10 +41,27 @@ func NewAPI(cookie string) (*API, error) {
 	}
 
 	return &API{
-		Cookie: cookie,
-		client: http.DefaultClient,
-		signer: signer,
+		Cookie:     cookie,
+		client:     http.DefaultClient,
+		signer:     signer,
+		ddmcSID:    `4606726bbe6337d4094e1dec808431d9`,
+		ddmcOpenID: `osP8I0RgncVIhrJLWwUCb0gi9uDQ`,
 	}, nil
+}
+
+func (api *API) SetSID(sid string) *API {
+	if len(sid) > 0 {
+		api.ddmcSID = sid
+	}
+
+	return api
+}
+
+func (api *API) SetOpenID(openid string) *API {
+	if len(openid) > 0 {
+		api.ddmcOpenID = openid
+	}
+	return api
 }
 
 func (api *API) SetAddress(address Address) *API {
@@ -503,8 +522,8 @@ func (api *API) newURLEncodedForm() url.Values {
 
 	// me
 	params.Set("sharer_uid", ``)
-	params.Set("s_id", `4606726bbe6337d4094e1dec808431d9`)
-	params.Set("openid", `osP8I0RgncVIhrJLWwUCb0gi9uDQ`)
+	params.Set("s_id", api.ddmcSID)
+	params.Set("openid", api.ddmcOpenID)
 	params.Set("h5_source", ``)
 	params.Set("time", api.getTime())
 

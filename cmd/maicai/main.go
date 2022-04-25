@@ -13,8 +13,10 @@ import (
 )
 
 var (
-	cookie       = flag.String("cookie", "", "叮咚cookie")
+	cookie       = flag.String("cookie", "", "叮咚cookie， 抓包小程序可得")
 	dingdinghook = flag.String("dingding", "", "钉钉机器人")
+	sid          = flag.String("sid", "", "抓包小程序可得")
+	openid       = flag.String("openid", "", "抓包小程序可得")
 )
 
 var globalCart = NewCart()
@@ -87,6 +89,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	ddapi.SetSID(*sid)
+	ddapi.SetOpenID(*openid)
 
 	userDetail, err := ddapi.UserDetail()
 	if err != nil {
@@ -165,7 +170,7 @@ MakeOrder:
 	order, err := ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
 	if err != nil {
 		log.Println("下单失败", err)
-		return
+		goto CheckTime
 	}
 
 	log.Println("下单成功", order)
