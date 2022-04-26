@@ -350,9 +350,9 @@ func (api *API) CheckOrder(productList ProductList, useBalance bool) (*CheckOrde
 	params.Set("freight_ticket_id", "default")
 	params.Set("is_use_point", "0")
 	params.Set("is_use_balance", "0")
-	if useBalance {
-		params.Set("is_use_balance", "1")
-	}
+	// if useBalance {
+	// 	params.Set("is_use_balance", "1")
+	// }
 	params.Set("is_buy_vip", "0")
 	params.Set("coupons_id", "")
 	params.Set("is_buy_coupons", "0")
@@ -426,25 +426,11 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 		UserTicketID:         checkOrder.Order.DefaultCoupon.ID,
 	}
 
-	goodsRealMoney, _ := strconv.ParseFloat(checkOrder.Order.GoodsRealMoney, 64)
-	orderFreight, _ := strconv.ParseFloat(payment.OrderFreight, 64)
-
-	price := strconv.FormatFloat(goodsRealMoney+orderFreight, 'f', 2, 64)
-	log.Println("订单总价", checkOrder.Order.TotalMoney, price)
-
-	payment.Price = price
-
 	if len(payment.FreightDiscountMoney) == 0 {
 		payment.FreightDiscountMoney = "0.00"
 	}
 
 	var pl = cartInfo.NewOrderProductList[0]
-	pl.TotalMoney = checkOrder.Order.TotalMoney
-	pl.GoodsRealMoney = checkOrder.Order.GoodsRealMoney
-	pl.TotalOriginMoney = checkOrder.Order.GoodsOriginMoney
-	pl.InstantRebateMoney = checkOrder.Order.InstantRebateMoney
-	pl.UsedBalanceMoney = checkOrder.Order.UsedBalanceMoney
-	pl.CanUsedBalanceMoney = checkOrder.Order.CanUsedBalanceMoney
 
 	var pkg = struct {
 		ProductList
@@ -511,7 +497,8 @@ func (api *API) newBaseHeader() http.Header {
 	header.Set("host", "maicai.api.ddxq.mobi")
 	header.Set("User-Agent", api.config.UserAgent)
 	header.Set("content-type", "application/x-www-form-urlencoded")
-	header.Set("Referer", "https://servicewechat.com/wx1e113254eda17715/425/page-frame.html")
+	header.Set("Referer", api.config.Refer)
+	header.Set("Origin", api.config.Origin)
 
 	header.Set("ddmc-api-version", api.config.APIVersion)
 	header.Set("ddmc-app-client-id", api.config.ClientID)
@@ -560,6 +547,7 @@ func (api *API) newURLEncodedForm() url.Values {
 	params.Set("channel", api.config.Channel)
 	params.Set("app_client_id", api.config.ClientID)
 	params.Set("device_token", api.config.DeviceToken)
+	params.Set("wx", "1")
 
 	// me
 	params.Set("sharer_uid", ``)
@@ -610,9 +598,15 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}, debug .
 	}
 
 	if debugMode(debug...) {
+		fmt.Println("====header====")
 		for k, v := range req.Header {
 			fmt.Printf("%s\t%s\n", k, v[0])
 		}
+		fmt.Println("====body====")
+		for k, v := range form {
+			fmt.Printf("%s\t%s\n", k, v[0])
+		}
+
 	}
 
 	resp, err := api.client.Do(req)

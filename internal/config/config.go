@@ -52,6 +52,7 @@ func (c *Config) NewMode() (*Mode, error) {
 
 	mode := &Mode{
 		BoostMode:       *boostMode,
+		useBalance:      c.UseBalance,
 		cartInterval:    cartInterval,
 		reserveInterval: reserveInterval,
 	}
