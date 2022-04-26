@@ -103,3 +103,4 @@ func (mode *Mode) GetCartInterval() time.Duration    { return mode.cartInterval 
 func (mode *Mode) GetReserveInterval() time.Duration { return mode.reserveInterval }
 func (mode *Mode) GetRecheckInterval() time.Duration { return mode.recheckInterval }
 func (mode *Mode) GetReorderInterval() time.Duration { return mode.reorderInterval }
+func (mode *Mode) UseBalance() bool                  { return mode.config.UseBalance }

@@ -218,7 +218,7 @@ func (api *API) Cart() (*CartInfo, error) {
 	}
 	request.Header = header
 	var cart = new(CartInfo)
-	err = api.do(request, nil, cart)
+	err = api.do(request, nil, cart, true)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +260,7 @@ func (api *API) GetMultiReserveTime(products []ProductListItem) (*MultiReserveTi
 
 	request.Header = header
 	var times = new(MultiReserveTime)
-	err = api.do(request, params, times, true)
+	err = api.do(request, params, times)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +317,7 @@ func (api *API) UpdateCheck(productId string, cartId string) (*CartInfo, error) 
 	return cart, nil
 }
 
-func (api *API) CheckOrder(productList ProductList) (*CheckOrder, error) {
+func (api *API) CheckOrder(productList ProductList, useBalance bool) (*CheckOrder, error) {
 	if len(productList.Products) == 0 {
 		return nil, errors.New("没有可购买商品")
 	}
@@ -345,15 +345,18 @@ func (api *API) CheckOrder(productList ProductList) (*CheckOrder, error) {
 		return nil, err
 	}
 
-	var urlForm = api.newURLEncodedForm()
-	urlForm.Set("user_ticket_id", "default")
-	urlForm.Set("freight_ticket_id", "default")
-	urlForm.Set("is_use_point", "0")
-	urlForm.Set("is_use_balance", "0")
-	urlForm.Set("is_buy_vip", "0")
-	urlForm.Set("coupons_id", "")
-	urlForm.Set("is_buy_coupons", "0")
-	urlForm.Set("packages", string(packagesData))
+	var params = api.newURLEncodedForm()
+	params.Set("user_ticket_id", "default")
+	params.Set("freight_ticket_id", "default")
+	params.Set("is_use_point", "0")
+	params.Set("is_use_balance", "0")
+	if useBalance {
+		params.Set("is_use_balance", "1")
+	}
+	params.Set("is_buy_vip", "0")
+	params.Set("coupons_id", "")
+	params.Set("is_buy_coupons", "0")
+	params.Set("packages", string(packagesData))
 
 	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/order/checkOrder")
 	if err != nil {
@@ -372,7 +375,7 @@ func (api *API) CheckOrder(productList ProductList) (*CheckOrder, error) {
 
 	request.Header = header
 	var checkOrder = new(CheckOrder)
-	err = api.do(request, urlForm, checkOrder)
+	err = api.do(request, params, checkOrder, true)
 	if err != nil {
 		return nil, err
 	}
@@ -423,9 +426,25 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 		UserTicketID:         checkOrder.Order.DefaultCoupon.ID,
 	}
 
+	goodsRealMoney, _ := strconv.ParseFloat(checkOrder.Order.GoodsRealMoney, 64)
+	orderFreight, _ := strconv.ParseFloat(payment.OrderFreight, 64)
+
+	price := strconv.FormatFloat(goodsRealMoney+orderFreight, 'f', 2, 64)
+	log.Println("订单总价", checkOrder.Order.TotalMoney)
+
+	payment.Price = price
+
 	if len(payment.FreightDiscountMoney) == 0 {
 		payment.FreightDiscountMoney = "0.00"
 	}
+
+	var pl = cartInfo.NewOrderProductList[0]
+	pl.TotalMoney = checkOrder.Order.TotalMoney
+	pl.GoodsRealMoney = checkOrder.Order.GoodsRealMoney
+	pl.TotalOriginMoney = checkOrder.Order.GoodsOriginMoney
+	pl.InstantRebateMoney = checkOrder.Order.InstantRebateMoney
+	pl.UsedBalanceMoney = checkOrder.Order.UsedBalanceMoney
+	pl.CanUsedBalanceMoney = checkOrder.Order.CanUsedBalanceMoney
 
 	var pkg = struct {
 		ProductList
@@ -436,7 +455,7 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 		FirstSelectedBigTime int64  `json:"first_selected_big_time"`
 		ReceiptWithoutSku    int    `json:"receipt_without_sku"`
 	}{
-		ProductList:          cartInfo.NewOrderProductList[0],
+		ProductList:          pl,
 		ReservedTimeStart:    reserveTime.StartTimestamp,
 		ReservedTimeEnd:      payment.ReservedTimeEnd,
 		EtaTraceID:           "",

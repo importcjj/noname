@@ -197,14 +197,19 @@ MakeOrder:
 		goto CheckTime
 	}
 	makingOrderProcess = true
-	checkOrder, err := ddapi.CheckOrder(cart.NewOrderProductList[0])
+	usebalance := mode.UseBalance()
+	if usebalance {
+		log.Println("使用余额支付")
+
+	}
+	checkOrder, err := ddapi.CheckOrder(cart.NewOrderProductList[0], usebalance)
 	if err != nil {
 		log.Println("检查订单失败", err)
 		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
 			checkOrderSuccess := false
 			for !checkOrderSuccess {
 				log.Println("重新检查订单", err)
-				checkOrder, err = ddapi.CheckOrder(cart.NewOrderProductList[0])
+				checkOrder, err = ddapi.CheckOrder(cart.NewOrderProductList[0], usebalance)
 				if err != nil {
 					log.Println("检查订单失败", err)
 					Sleep(mode.RecheckInterval())
@@ -217,6 +222,7 @@ MakeOrder:
 		}
 	}
 	log.Println("检查订单成功，开始下单")
+
 	order, err := ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
 	if err != nil {
 		newOrderSuccess := false

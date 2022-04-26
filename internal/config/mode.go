@@ -10,6 +10,7 @@ type Mode struct {
 	BoostMode       boost.Mode
 	cartInterval    time.Duration
 	reserveInterval time.Duration
+	useBalance      bool
 }
 
 func (mode *Mode) CartInterval() time.Duration {
@@ -32,4 +33,12 @@ func (mode *Mode) RecheckInterval() time.Duration {
 
 func (mode *Mode) ReorderInterval() time.Duration {
 	return mode.BoostMode.GetReorderInterval()
+}
+
+func (mode *Mode) UseBalance() bool {
+	if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
+		return mode.BoostMode.UseBalance()
+	}
+
+	return mode.useBalance
 }

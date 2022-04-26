@@ -16,6 +16,8 @@ api:
 cart_interval: "2m"
 # 检查运力的间隔，过短会导致被风控
 reserve_interval: "2s"
+# 使用余额支付
+use_balance: false
 
 # 早上抢货专用，可适当设置较小的间隔
 boost_mode:
@@ -28,6 +30,9 @@ boost_mode:
   recheck_interval: "500ms"
   # 重新下单的间隔
   reorder_interval: "500ms"
+  # 使用余额支付
+  use_balance: false
+
 
   # 预热时间段
   warm_up_time_span:

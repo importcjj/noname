@@ -7,6 +7,7 @@ type TimeSpanConfig struct {
 
 type Config struct {
 	Enable          bool             `json:"enable" yaml:"enable"`
+	UseBalance      bool             `yaml:"use_balance" json:"use_balance"`
 	CartInterval    string           `yaml:"cart_interval" json:"cart_interval" default:"2m"`
 	ReserveInterval string           `yaml:"reserve_interval" json:"reserve_interval" default:"550ms"`
 	RecheckInterval string           `yaml:"recheck_interval" json:"recheck_interval" default:"500ms"`

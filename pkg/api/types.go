@@ -172,7 +172,6 @@ type ReserveTime struct {
 type CheckOrder struct {
 	Order struct {
 		Freights             []FreightItem `json:"freights"`
-		TotalMoney           string        `json:"total_money"`
 		FreightDiscountMoney string        `json:"freight_discount_money"`
 		FreightMoney         string        `json:"freight_money"`
 		FreightRealMoney     string        `json:"freight_real_money"`
@@ -181,7 +180,23 @@ type CheckOrder struct {
 			Money string `json:"money"`
 			ID    string `json:"_id"`
 		} `json:"default_coupon"`
+
+		TotalMoney          string `json:"total_money"`
+		InstantRebateMoney  string `json:"instant_rebate_money"`
+		GoodsRealMoney      string `json:"goods_real_money"`
+		GoodsOriginMoney    string `json:"goods_origin_money"`
+		UsedPointNum        int    `json:"used_point_num"`
+		UsedPointMoney      string `json:"used_point_money"`
+		CanUsedPointNum     int    `json:"can_used_point_num"`
+		CanUsedPointMoney   string `json:"can_used_point_money"`
+		UsedBalanceMoney    string `json:"used_balance_money"`
+		CanUsedBalanceMoney string `json:"can_used_balance_money"`
 	} `json:"order"`
+
+	Balance struct {
+		Balance   string `json:"balance"`
+		IsSuccess int    `json:"is_success"`
+	} `json:"balance"`
 }
 
 type FreightItem struct {

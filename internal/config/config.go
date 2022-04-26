@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
-	"github.com/importcjj/ddxq/pkg/serverchan"
 	"time"
+
+	"github.com/importcjj/ddxq/pkg/serverchan"
 
 	"github.com/importcjj/ddxq/internal/boost"
 	"github.com/importcjj/ddxq/pkg/api"
@@ -13,6 +14,7 @@ import (
 
 type Config struct {
 	API             api.Config `yaml:"api" json:"api"`
+	UseBalance      bool       `yaml:"use_balance" json:"use_balance"`
 	CartInterval    string     `yaml:"cart_interval" json:"cart_interval" default:"2m"`
 	ReserveInterval string     `yaml:"reserve_interval" json:"reserve_interval" default:"2s"`
 
