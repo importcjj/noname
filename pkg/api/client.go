@@ -430,7 +430,7 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 	orderFreight, _ := strconv.ParseFloat(payment.OrderFreight, 64)
 
 	price := strconv.FormatFloat(goodsRealMoney+orderFreight, 'f', 2, 64)
-	log.Println("订单总价", checkOrder.Order.TotalMoney)
+	log.Println("订单总价", checkOrder.Order.TotalMoney, price)
 
 	payment.Price = price
 
