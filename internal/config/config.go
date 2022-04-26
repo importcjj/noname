@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/importcjj/ddxq/pkg/serverchan"
 	"time"
 
 	"github.com/importcjj/ddxq/internal/boost"
@@ -15,8 +16,9 @@ type Config struct {
 	CartInterval    string     `yaml:"cart_interval" json:"cart_interval" default:"2m"`
 	ReserveInterval string     `yaml:"reserve_interval" json:"reserve_interval" default:"2s"`
 
-	Dingding  dingding.Config `yaml:"dingding" json:"dingding"`
-	BoostMode boost.Config    `yaml:"boost_mode" json:"boost_mode"`
+	Dingding   dingding.Config   `yaml:"dicgding" json:"dingding"`
+	ServerChan serverchan.Config `yaml:"serverChan" json:"serverChan"`
+	BoostMode  boost.Config      `yaml:"boost_mode" json:"boost_mode"`
 }
 
 func Load(filepath string) (Config, error) {
