@@ -28,8 +28,6 @@ boost_mode:
   recheck_interval: "500ms"
   # 重新下单的间隔
   reorder_interval: "500ms"
-  # 使用余额支付
-  use_balance: false
 
 
   # 预热时间段
