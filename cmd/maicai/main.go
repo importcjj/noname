@@ -12,6 +12,7 @@ import (
 	"github.com/importcjj/ddxq/pkg/api"
 	"github.com/importcjj/ddxq/pkg/dingding"
 	"github.com/importcjj/ddxq/pkg/notify"
+	"github.com/importcjj/ddxq/pkg/serverchan"
 )
 
 var (
@@ -107,6 +108,7 @@ func main() {
 
 	notify := notify.Combine(
 		dingding.NewRobot(config.Dingding),
+		serverchan.NewRobot(config.ServerChan),
 	)
 
 	ddapi, err := api.NewAPI(config.API)
@@ -139,7 +141,7 @@ func main() {
 
 	ddapi.SetAddress(inAddress)
 
-	// 定期更新购物车
+	//定期更新购物车
 	go intervalUpdateCart(ddapi, config, mode)
 
 	if mode.BoostMode.Enable() {
@@ -237,7 +239,7 @@ MakeOrder:
 
 	log.Println("下单成功", order)
 	makingOrderProcess = false
-	notify.Send(context.Background(), "下单成功, 请付款")
+	notify.Send(context.Background(), "下单成功, 快抓紧付钱！")
 
 	var continueY string
 	fmt.Println("是否退出[y/n]?")
