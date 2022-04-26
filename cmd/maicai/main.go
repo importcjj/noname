@@ -11,6 +11,7 @@ import (
 	"github.com/importcjj/ddxq/internal/config"
 	"github.com/importcjj/ddxq/pkg/api"
 	"github.com/importcjj/ddxq/pkg/dingding"
+	"github.com/importcjj/ddxq/pkg/notify"
 )
 
 var (
@@ -104,7 +105,9 @@ func main() {
 		log.Fatalf("无法创建boost: %v", err)
 	}
 
-	dingdingbot := dingding.NewRobot(config.Dingding)
+	notify := notify.Combine(
+		dingding.NewRobot(config.Dingding),
+	)
 
 	ddapi, err := api.NewAPI(config.API)
 	if err != nil {
@@ -169,7 +172,7 @@ CheckTime:
 						if !time.FullFlag {
 							reserveTime = time
 							log.Println("预约时间 -> ", time)
-							dingdingbot.Send(context.Background(), reserveTime.SelectMsg)
+							notify.Send(context.Background(), reserveTime.SelectMsg)
 
 							goto MakeOrder
 						}
@@ -234,7 +237,7 @@ MakeOrder:
 
 	log.Println("下单成功", order)
 	makingOrderProcess = false
-	dingdingbot.Send(context.Background(), "下单成功, 请付款")
+	notify.Send(context.Background(), "下单成功, 请付款")
 
 	var continueY string
 	fmt.Println("是否退出[y/n]?")
