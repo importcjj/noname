@@ -13,14 +13,14 @@ import (
 )
 
 var (
-	cookie       = flag.String("cookie", "DDXQSESSID=4c165b29f0466c6acbc48ee07b0b992c", "叮咚cookie， 抓包小程序可得")
+	cookie       = flag.String("cookie", "", "叮咚cookie， 抓包小程序可得")
 	dingdinghook = flag.String("dingding", "", "钉钉机器人")
-	sid          = flag.String("sid", "4c165b29f0466c6acbc48ee07b0b992c", "抓包小程序可得")
-	openid       = flag.String("openid", "osP8I0f05BPiuikzy0HQeSMubrg4", "抓包小程序可得")
-	deviceID     = flag.String("device_id", "osP8I0f05BPiuikzy0HQeSMubrg4", "抓包小程序可得")
-	deviceToken  = flag.String("device_token", "WHJMrwNw1k/F0qdLNvE01AUwlQtiEc7qol6Nyikv9NlcvvPrivpurzjH084wLhpKazlcN+OgJ5CPOGBpFtSvdQi8BwFXwUa90dCW1tldyDzmauSxIJm5Txg==1487582755342", "抓包小程序可得")
-	ua           = flag.String("ua", "Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E217 MicroMessenger/6.8.0(0x16080000) NetType/WIFI Language/en Branch/Br_trunk MiniProgramEnv/Mac", "User-Agent, 抓包小程序可得")
-	boostMode    = flag.Bool("boost", true, "彻底疯狂！！！！！")
+	sid          = flag.String("sid", "", "抓包小程序可得")
+	openid       = flag.String("openid", "", "抓包小程序可得")
+	deviceID     = flag.String("device_id", "", "抓包小程序可得")
+	deviceToken  = flag.String("device_token", "", "抓包小程序可得")
+	ua           = flag.String("ua", "", "User-Agent, 抓包小程序可得")
+	boostMode    = flag.Bool("boost", false, "彻底疯狂！！！！！")
 )
 
 var globalCart = NewCart()
