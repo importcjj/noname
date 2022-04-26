@@ -1,16 +1,16 @@
 api:
   # 必填
-  cookie: "DDXQSESSID=4c165b29f0466c6acbc48ee07b0b992c"
+  cookie: ""
   # 选填
   ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E217 MicroMessenger/6.8.0(0x16080000) NetType/WIFI Language/en Branch/Br_trunk MiniProgramEnv/Mac"
   # 必填
-  sid: "4c165b29f0466c6acbc48ee07b0b992c"
+  sid: ""
   # 必填
-  openid: "osP8I0f05BPiuikzy0HQeSMubrg4"
+  openid: ""
   # 必填
-  device_id: "osP8I0f05BPiuikzy0HQeSMubrg4"
+  device_id: ""
   # 必填
-  device_token: "WHJMrwNw1k/F0qdLNvE01AUwlQtiEc7qol6Nyikv9NlcvvPrivpurzjH084wLhpKazlcN+OgJ5CPOGBpFtSvdQi8BwFXwUa90dCW1tldyDzmauSxIJm5Txg==1487582755342"
+  device_token: ""
 
 # 更新购物车的间隔
 cart_interval: "2m"
@@ -19,7 +19,7 @@ reserve_interval: "2s"
 
 # 早上抢货专用，可适当设置较小的间隔
 boost_mode:
-  enable: true
+  enable: false
   # 更新购物车的间隔
   cart_interval: "5s"
   # 检查运力的间隔
@@ -31,9 +31,9 @@ boost_mode:
 
   # 预热时间段
   warm_up_time_span:
-    - start: "05:58:00"
+    - start: "05:57:00"
       end: "06:00:00"
-    - start: "08:28:00"
+    - start: "08:27:00"
       end: "08:30:00"
 
   # 疯狂时间段
@@ -51,5 +51,5 @@ dingding:
 
 # server酱通知配置
 serverChan:
-  enable: true
-  key: "SCT128232T4qmEtfSfs6uJicFm23Dh5olT"
+  enable: false
+  key: ""
