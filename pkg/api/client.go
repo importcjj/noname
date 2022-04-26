@@ -226,7 +226,7 @@ func (api *API) Cart() (*CartInfo, error) {
 	return cart, nil
 }
 
-func (api *API) GetMultiReverseTime(products []ProductListItem) (*MultiReserveTime, error) {
+func (api *API) GetMultiReserveTime(products []ProductListItem) (*MultiReserveTime, error) {
 	if api.address == nil {
 		return nil, errors.New("需先使用SetAddress绑定地址信息")
 	}
@@ -260,7 +260,7 @@ func (api *API) GetMultiReverseTime(products []ProductListItem) (*MultiReserveTi
 
 	request.Header = header
 	var times = new(MultiReserveTime)
-	err = api.do(request, params, times)
+	err = api.do(request, params, times, true)
 	if err != nil {
 		return nil, err
 	}
@@ -588,6 +588,12 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}, debug .
 		}
 
 		req.Body = io.NopCloser(strings.NewReader(form.Encode()))
+	}
+
+	if debugMode(debug...) {
+		for k, v := range req.Header {
+			fmt.Printf("%s\t%s\n", k, v[0])
+		}
 	}
 
 	resp, err := api.client.Do(req)

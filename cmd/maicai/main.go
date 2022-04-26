@@ -162,7 +162,7 @@ CheckTime:
 			continue
 		}
 		log.Println("正在获取运力...")
-		times, err := ddapi.GetMultiReverseTime(cart.NewOrderProductList[0].Products)
+		times, err := ddapi.GetMultiReserveTime(cart.NewOrderProductList[0].Products)
 		if err != nil {
 			log.Println("获取运力失败", err)
 		} else {
