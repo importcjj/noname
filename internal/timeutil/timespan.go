@@ -4,13 +4,14 @@ import (
 	"time"
 )
 
+const layout = "15:04:05"
+
 type Span struct {
 	start time.Time
 	end   time.Time
 }
 
 func NewSpan(start, end string) (*Span, error) {
-	const layout = "15:04:05"
 	startTime, err := time.Parse(layout, start)
 	if err != nil {
 		return nil, err
@@ -35,9 +36,13 @@ func (s *Span) Include(check time.Time) bool {
 		end   = s.end
 	)
 
+	t := check.Format(layout)
+	check, _ = time.Parse(layout, t)
+
 	if start.Before(end) {
 		return !check.Before(start) && !check.After(end)
 	}
+
 	if start.Equal(end) {
 		return check.Equal(start)
 	}
