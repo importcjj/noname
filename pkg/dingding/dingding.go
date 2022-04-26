@@ -7,20 +7,27 @@ import (
 )
 
 type DingdingRobot struct {
-	robot   dingrobot.Roboter
-	keyword string
-	enabled bool
+	robot  dingrobot.Roboter
+	config *Config
 }
 
-func NewRobot(keyword, webhook string) *DingdingRobot {
-	robot := dingrobot.NewRobot(webhook)
-	return &DingdingRobot{
-		robot:   robot,
-		keyword: keyword,
-		enabled: len(webhook) > 0,
+func NewRobot(config Config) *DingdingRobot {
+
+	robot := &DingdingRobot{
+		config: &config,
 	}
+
+	if len(config.Hook) > 0 {
+		robot.robot = dingrobot.NewRobot(config.Hook)
+	}
+
+	return robot
 }
 
 func (r *DingdingRobot) Send(ctx context.Context, content string) error {
-	return r.robot.SendText(r.keyword+"\n"+content, nil, false)
+	if r.config.Enable {
+		return r.robot.SendText(r.config.Keyword+"\n"+content, nil, false)
+	}
+
+	return nil
 }

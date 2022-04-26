@@ -8,19 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/importcjj/ddxq/internal/config"
 	"github.com/importcjj/ddxq/pkg/api"
 	"github.com/importcjj/ddxq/pkg/dingding"
 )
 
 var (
-	cookie       = flag.String("cookie", "", "叮咚cookie， 抓包小程序可得")
-	dingdinghook = flag.String("dingding", "", "钉钉机器人")
-	sid          = flag.String("sid", "", "抓包小程序可得")
-	openid       = flag.String("openid", "", "抓包小程序可得")
-	deviceID     = flag.String("device_id", "", "抓包小程序可得")
-	deviceToken  = flag.String("device_token", "", "抓包小程序可得")
-	ua           = flag.String("ua", "", "User-Agent, 抓包小程序可得")
-	boostMode    = flag.Bool("boost", false, "彻底疯狂！！！！！")
+	configFile = flag.String("config", "config.yml", "配置文件")
 )
 
 var globalCart = NewCart()
@@ -51,7 +45,12 @@ func (cart *Cart) Get() *api.CartInfo {
 	return cart.cart
 }
 
-func intervalUpdateCart(ddapi *api.API) {
+func Sleep(d time.Duration) {
+	log.Printf("sleep %s", d)
+	time.Sleep(d)
+}
+
+func intervalUpdateCart(ddapi *api.API, config config.Config, mode *config.Mode) {
 
 	for {
 		// 下单中不刷新购物车，避免抢单时冲突
@@ -62,11 +61,6 @@ func intervalUpdateCart(ddapi *api.API) {
 		cart, err := ddapi.Cart()
 		if err != nil {
 			log.Println("购物车获取失败", err)
-			if *boostMode && preBoostTime() {
-				time.Sleep(10 * time.Second)
-			} else {
-				time.Sleep(2 * time.Minute)
-			}
 		} else {
 
 			// 勾选有货的商品
@@ -89,29 +83,33 @@ func intervalUpdateCart(ddapi *api.API) {
 				log.Println("购物车暂无可下单商品")
 			}
 			globalCart.Set(cart)
-			time.Sleep(2 * time.Minute)
 		}
 
-		//time.Sleep(550 * time.Millisecond)
+		Sleep(mode.CartInterval())
 	}
 }
 
 func main() {
 	flag.Parse()
 
-	dingdingbot := dingding.NewRobot("信号", *dingdinghook)
-
-	ddapi, err := api.NewAPI(*cookie)
+	config, err := config.Load(*configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ddapi.
-		SetSID(*sid).
-		SetOpenID(*openid).
-		SetDeviceID(*deviceID).
-		SetDeviceToken(*deviceToken).
-		SetUserAgent(*ua)
+	log.Printf("%#v", config)
+
+	mode, err := config.NewMode()
+	if err != nil {
+		log.Fatalf("无法创建boost: %v", err)
+	}
+
+	dingdingbot := dingding.NewRobot(config.Dingding)
+
+	ddapi, err := api.NewAPI(config.API)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	userDetail, err := ddapi.UserDetail()
 	if err != nil {
@@ -139,12 +137,12 @@ func main() {
 	ddapi.SetAddress(inAddress)
 
 	// 定期更新购物车
-	go intervalUpdateCart(ddapi)
+	go intervalUpdateCart(ddapi, config, mode)
 
-	log.Println("开始运行...")
-	if *boostMode {
+	if mode.BoostMode.Enable() {
 		log.Println("注意！boost模式已启动，到时我将彻底疯狂！！！")
 	}
+	log.Println("开始运行...")
 
 	var reserveTime api.ReserveTime
 
@@ -152,7 +150,7 @@ CheckTime:
 
 	for {
 		// boost模式非疯狂时间不请求接口
-		if *boostMode && !boostTime() {
+		if mode.BoostMode.Enable() && !mode.BoostMode.BoostTime() {
 			continue
 		}
 
@@ -182,11 +180,7 @@ CheckTime:
 			log.Println("当前暂无可用运力...")
 		}
 
-		if boostTime() {
-			time.Sleep(550 * time.Millisecond)
-		} else {
-			time.Sleep(2000 * time.Millisecond)
-		}
+		Sleep(mode.ReserveInterval())
 
 	}
 
@@ -201,14 +195,14 @@ MakeOrder:
 	checkOrder, err := ddapi.CheckOrder(cart.NewOrderProductList[0])
 	if err != nil {
 		log.Println("检查订单失败", err)
-		if *boostMode && boostTime() {
+		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
 			checkOrderSuccess := false
 			for !checkOrderSuccess {
 				log.Println("重新检查订单", err)
 				checkOrder, err = ddapi.CheckOrder(cart.NewOrderProductList[0])
 				if err != nil {
 					log.Println("检查订单失败", err)
-					time.Sleep(500 * time.Millisecond)
+					Sleep(mode.RecheckInterval())
 				} else {
 					checkOrderSuccess = true
 				}
@@ -222,13 +216,13 @@ MakeOrder:
 	if err != nil {
 		newOrderSuccess := false
 		log.Println("下单失败", err)
-		if *boostMode && boostTime() {
+		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
 			for !newOrderSuccess {
 				log.Println("重新下单", err)
 				order, err = ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
 				if err != nil {
 					log.Println("下单失败", err)
-					time.Sleep(500 * time.Millisecond)
+					Sleep(mode.ReorderInterval())
 				} else {
 					newOrderSuccess = true
 				}
@@ -251,31 +245,4 @@ MakeOrder:
 	}
 
 	log.Println("停止运行并退出")
-}
-
-func boostTime() bool {
-
-	now := time.Now()
-	if now.Hour() == 6 && now.Minute() <= 5 {
-		return true
-	}
-
-	if now.Hour() == 8 && now.Minute() >= 30 && now.Minute() <= 35 {
-		return true
-	}
-
-	return false
-}
-
-func preBoostTime() bool {
-	now := time.Now()
-	if now.Hour() == 5 && now.Minute() >= 58 {
-		return true
-	}
-
-	if now.Hour() == 8 && now.Minute() >= 28 && now.Minute() <= 30 {
-		return true
-	}
-
-	return false
 }

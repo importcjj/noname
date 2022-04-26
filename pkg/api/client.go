@@ -18,28 +18,19 @@ import (
 )
 
 type API struct {
-	Cookie string
+	config *Config
+
 	client *http.Client
 	signer *Signer
 
-	ddmcChannel     string
-	ddmcClientID    string
-	ddmcAPIVersion  string
-	ddmcAPPVersion  string
-	ddmcUA          string
-	ddmcUid         string //自动设置
-	ddmcSID         string // 抓包可得
-	ddmcOpenID      string // 抓包可得
-	ddmcDeviceID    string // 抓包可得
-	ddmcDeviceToken string // 抓包可得
-
-	address   *Address
-	debugTime string
+	address *Address
+	ddmcUid string
 }
 
-func NewAPI(cookie string) (*API, error) {
-	if len(cookie) == 0 {
-		return nil, errors.New("无效的cookie")
+func NewAPI(config Config) (*API, error) {
+	err := config.check()
+	if err != nil {
+		return nil, err
 	}
 
 	signer, err := NewSigner("./sign.js")
@@ -48,24 +39,15 @@ func NewAPI(cookie string) (*API, error) {
 	}
 
 	return &API{
-		Cookie:          cookie,
-		client:          http.DefaultClient,
-		signer:          signer,
-		ddmcAPIVersion:  "9.50.1",
-		ddmcAPPVersion:  "2.85.2",
-		ddmcChannel:     "applet",
-		ddmcClientID:    "4",
-		ddmcUA:          `Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E217 MicroMessenger/6.8.0(0x16080000) NetType/WIFI Language/en Branch/Br_trunk MiniProgramEnv/Mac`,
-		ddmcSID:         `4606726bbe6337d4094e1dec808431d9`,
-		ddmcOpenID:      `osP8I0RgncVIhrJLWwUCb0gi9uDQ`,
-		ddmcDeviceID:    `osP8I0RgncVIhrJLWwUCb0gi9uDQ`,
-		ddmcDeviceToken: `WHJMrwNw1k/FKPjcOOgRd+Ed/O2S3GOkz07Wa1UPcfbDL2PfhzepFdBa/QF9u539PLLYm6SKU+84w6mApK0aXmA9Vne9MFdf+dCW1tldyDzmauSxIJm5Txg==1487582755342`,
+		client: http.DefaultClient,
+		signer: signer,
+		config: &config,
 	}, nil
 }
 
 func (api *API) SetUserAgent(ua string) *API {
 	if len(ua) > 0 {
-		api.ddmcUA = ua
+		api.config.UserAgent = ua
 	}
 
 	return api
@@ -73,7 +55,7 @@ func (api *API) SetUserAgent(ua string) *API {
 
 func (api *API) SetSID(sid string) *API {
 	if len(sid) > 0 {
-		api.ddmcSID = sid
+		api.config.SID = sid
 	}
 
 	return api
@@ -81,14 +63,14 @@ func (api *API) SetSID(sid string) *API {
 
 func (api *API) SetOpenID(openid string) *API {
 	if len(openid) > 0 {
-		api.ddmcOpenID = openid
+		api.config.OpenID = openid
 	}
 	return api
 }
 
 func (api *API) SetDeviceID(id string) *API {
 	if len(id) > 0 {
-		api.ddmcDeviceID = id
+		api.config.DeviceID = id
 	}
 
 	return api
@@ -96,7 +78,7 @@ func (api *API) SetDeviceID(id string) *API {
 
 func (api *API) SetDeviceToken(token string) *API {
 	if len(token) > 0 {
-		api.ddmcDeviceToken = token
+		api.config.DeviceToken = token
 	}
 
 	return api
@@ -108,13 +90,15 @@ func (api *API) SetAddress(address Address) *API {
 }
 
 func (api *API) SetDebugTime(time string) *API {
-	api.debugTime = time
+	if len(time) > 0 {
+		api.config.DebugTime = time
+	}
 	return api
 }
 
 func (api *API) getTime() string {
-	if len(api.debugTime) > 0 {
-		return api.debugTime
+	if len(api.config.DebugTime) > 0 {
+		return api.config.DebugTime
 	}
 
 	return strconv.FormatInt(time.Now().Unix(), 10)
@@ -138,11 +122,11 @@ func (api *API) UserDetail() (*UserDetail, error) {
 	}
 
 	var query = url.Query()
-	query.Set("api_version", "9.50.0")
-	query.Set("app_version", "2.83.0")
+	query.Set("api_version", api.config.APIVersion)
+	query.Set("app_version", api.config.APPVersion)
 	query.Set("applet_source", "")
-	query.Set("channel", "applet")
-	query.Set("app_client_id", "4")
+	query.Set("channel", api.config.Channel)
+	query.Set("app_client_id", api.config.ClientID)
 	url.RawQuery = query.Encode()
 
 	request, err := http.NewRequest(http.MethodGet, url.String(), nil)
@@ -176,11 +160,11 @@ func (api *API) UserAddress() (*UserAddress, error) {
 	}
 
 	var query = url.Query()
-	query.Set("api_version", "9.50.0")
-	query.Set("app_version", "2.83.0")
+	query.Set("api_version", api.config.APIVersion)
+	query.Set("app_version", api.config.APPVersion)
 	query.Set("applet_source", "")
-	query.Set("channel", "applet")
-	query.Set("app_client_id", "4")
+	query.Set("channel", api.config.Channel)
+	query.Set("app_client_id", api.config.ClientID)
 	url.RawQuery = query.Encode()
 
 	request, err := http.NewRequest(http.MethodGet, url.String(), nil)
@@ -216,11 +200,11 @@ func (api *API) Cart() (*CartInfo, error) {
 	var query = url.Query()
 	query.Set("station_id", api.address.StationInfo.ID)
 	query.Set("is_load", "1")
-	query.Set("api_version", "9.50.0")
-	query.Set("app_version", "2.83.0")
+	query.Set("api_version", api.config.APIVersion)
+	query.Set("app_version", api.config.APPVersion)
 	query.Set("applet_source", "")
-	query.Set("channel", "applet")
-	query.Set("app_client_id", "4")
+	query.Set("channel", api.config.Channel)
+	query.Set("app_client_id", api.config.ClientID)
 	url.RawQuery = query.Encode()
 
 	request, err := http.NewRequest(http.MethodGet, url.String(), nil)
@@ -506,21 +490,21 @@ func (api *API) newBaseHeader() http.Header {
 
 	header := http.Header{}
 	header.Set("host", "maicai.api.ddxq.mobi")
-	header.Set("User-Agent", api.ddmcUA)
+	header.Set("User-Agent", api.config.UserAgent)
 	header.Set("content-type", "application/x-www-form-urlencoded")
 	header.Set("Referer", "https://servicewechat.com/wx1e113254eda17715/425/page-frame.html")
 
-	header.Set("ddmc-api-version", api.ddmcAPIVersion)
-	header.Set("ddmc-app-client-id", api.ddmcClientID)
-	header.Set("ddmc-build-version", api.ddmcAPPVersion)
-	header.Set("ddmc-channel", api.ddmcChannel)
+	header.Set("ddmc-api-version", api.config.APIVersion)
+	header.Set("ddmc-app-client-id", api.config.ClientID)
+	header.Set("ddmc-build-version", api.config.APPVersion)
+	header.Set("ddmc-channel", api.config.Channel)
 	header.Set("ddmc-os-version", "[object Undefined]")
 
 	header.Set("ddmc-ip", "")
 	header.Set("ddmc-time", api.getTime())
 
-	header.Set("ddmc-device-id", api.ddmcDeviceID)
-	header.Set("Cookie", api.Cookie)
+	header.Set("ddmc-device-id", api.config.DeviceID)
+	header.Set("Cookie", api.config.Cookie)
 
 	return header
 }
@@ -551,17 +535,17 @@ func (api *API) newHeader() (http.Header, error) {
 func (api *API) newURLEncodedForm() url.Values {
 	var params = url.Values{}
 
-	params.Set("api_version", api.ddmcAPIVersion)
-	params.Set("app_version", api.ddmcAPPVersion)
+	params.Set("api_version", api.config.APIVersion)
+	params.Set("app_version", api.config.APPVersion)
 	params.Set("applet_source", ``)
-	params.Set("channel", api.ddmcChannel)
-	params.Set("app_client_id", api.ddmcClientID)
-	params.Set("device_token", api.ddmcDeviceToken)
+	params.Set("channel", api.config.Channel)
+	params.Set("app_client_id", api.config.ClientID)
+	params.Set("device_token", api.config.DeviceToken)
 
 	// me
 	params.Set("sharer_uid", ``)
-	params.Set("s_id", api.ddmcSID)
-	params.Set("openid", api.ddmcOpenID)
+	params.Set("s_id", api.config.SID)
+	params.Set("openid", api.config.OpenID)
 	params.Set("h5_source", ``)
 	params.Set("time", api.getTime())
 

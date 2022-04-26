@@ -1,0 +1,50 @@
+api:
+  # 必填
+  cookie: 
+  # 选填
+  ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E217 MicroMessenger/6.8.0(0x16080000) NetType/WIFI Language/en Branch/Br_trunk MiniProgramEnv/Mac"
+  # 必填
+  sid:
+  # 必填
+  openid: 
+  # 必填
+  device_id:
+  # 必填
+  device_token: 
+
+# 更新购物车的间隔
+cart_interval: "2m"
+# 检查运力的间隔，过短会导致被风控
+reserve_interval: "2s"
+
+# 早上抢货专用，可适当设置较小的间隔
+boost_mode:
+  enable: true
+  # 更新购物车的间隔
+  cart_interval: "2m"
+  # 检查运力的间隔
+  reserve_interval: "550ms"
+  # 重新checkOrder的间隔
+  recheck_interval: "500ms"
+  # 重新下单的间隔
+  reorder_interval: "500ms"
+
+  # 预热时间段
+  warm_up_time_span:
+    - start: "05:58:00"
+      end: "06:00:00"
+    - start: "08:28:00"
+      end: "08:30:00"
+
+  # 疯狂时间段
+  time_span:
+    - start: "06:00:00"
+      end: "06:05:00"
+    - start: "08:28:00"
+      end: "08:35:00"
+
+
+# 钉钉通知配置
+dingding:
+  enable: false
+  hook: ""
