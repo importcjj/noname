@@ -168,18 +168,13 @@ CheckTime:
 		if err != nil {
 			log.Println("获取运力失败", err)
 		} else {
-			for _, item := range *times {
-				for _, day := range item.Time {
-					for _, time := range day.Times {
-						if !time.FullFlag {
-							reserveTime = time
-							log.Println("预约时间 -> ", time)
-							notify.Send(context.Background(), reserveTime.SelectMsg)
+			time, ok := times.FirstUsableTime()
+			if ok {
+				reserveTime = time
+				log.Println("预约时间 -> ", time)
+				notify.Send(context.Background(), reserveTime.SelectMsg)
 
-							goto MakeOrder
-						}
-					}
-				}
+				goto MakeOrder
 			}
 
 			log.Println("当前暂无可用运力...")
