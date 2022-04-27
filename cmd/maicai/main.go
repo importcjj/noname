@@ -155,7 +155,9 @@ func main() {
 CheckTime:
 	for {
 		// boost模式非疯狂时间不请求接口
-		if mode.BoostMode.Enable() && !mode.BoostMode.BoostTime() {
+		if mode.BoostMode.Enable() &&
+			!mode.BoostMode.WarmUpBoostTime() &&
+			!mode.BoostMode.BoostTime() {
 			continue
 		}
 
@@ -206,6 +208,10 @@ CheckOrder:
 	log.Println("检查订单成功，开始下单")
 
 NewOrder:
+	if mode.BoostMode.Enable() && mode.BoostMode.WarmUpBoostTime() {
+		goto NewOrder
+	}
+
 	order, err := ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
 	if err != nil {
 		log.Println("下单失败", err)
