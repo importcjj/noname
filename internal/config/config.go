@@ -19,7 +19,7 @@ type Config struct {
 	ReserveInterval string     `yaml:"reserve_interval" json:"reserve_interval" default:"2s"`
 	HomeInterval    string     `yaml:"home_interval" json:"home_interval" default:"1m"`
 
-	Dingding   dingding.Config   `yaml:"dicgding" json:"dingding"`
+	Dingding   dingding.Config   `yaml:"dingding" json:"dingding"`
 	ServerChan serverchan.Config `yaml:"serverChan" json:"serverChan"`
 	BoostMode  boost.Config      `yaml:"boost_mode" json:"boost_mode"`
 }
