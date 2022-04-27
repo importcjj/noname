@@ -393,10 +393,10 @@ func (api *API) CheckOrder(productList ProductList, useBalance bool) (*CheckOrde
 	params.Set("coupons_id", "")
 	params.Set("is_buy_coupons", "0")
 	params.Set("packages", string(packagesData))
-	params.Set("check_order_type", "0")
-	params.Set("is_support_merge_payment", "1")
-	params.Set("showData", "true")
-	params.Set("showMsg", "false")
+	// params.Set("check_order_type", "0")
+	// params.Set("is_support_merge_payment", "1")
+	// params.Set("showData", "true")
+	// params.Set("showMsg", "false")
 
 	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/order/checkOrder")
 	if err != nil {
