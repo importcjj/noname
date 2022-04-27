@@ -18,7 +18,7 @@ type Config struct {
 	CartInterval    string     `yaml:"cart_interval" json:"cart_interval" default:"2m"`
 	ReserveInterval string     `yaml:"reserve_interval" json:"reserve_interval" default:"2s"`
 	HomeInterval    string     `yaml:"home_interval" json:"home_interval" default:"1m"`
-	AddressIndex    int        `yaml:"address_index" json:"address_index" default:-1`
+	AddressIndex    int        `yaml:"address_index" json:"address_index" default:"-1"`
 
 	Dingding   dingding.Config   `yaml:"dingding" json:"dingding"`
 	ServerChan serverchan.Config `yaml:"serverChan" json:"serverChan"`
