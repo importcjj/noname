@@ -228,3 +228,13 @@ type FreightItem struct {
 
 type AddNewOrder struct {
 }
+
+// 首页相关
+type HomeFlowDetail struct {
+	List []HomeFlowProduct `json:"list"`
+}
+
+type HomeFlowProduct struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}

@@ -53,6 +53,37 @@ func Sleep(d time.Duration) {
 	time.Sleep(d)
 }
 
+func intervalCheckHomePage(ddapi *api.API, mode *config.Mode, notify notify.Notify) {
+	var m map[string]struct{}
+	for {
+		homeflow, err := ddapi.HomeFlowDetail()
+		if err != nil {
+			log.Println("获取首页推荐商品失败", err)
+		}
+
+		var firstRun bool
+		if m == nil {
+			firstRun = true
+			m = make(map[string]struct{})
+		}
+
+		var findNew bool
+		for _, product := range homeflow.List {
+			_, ok := m[product.ID]
+			if !ok {
+				m[product.ID] = struct{}{}
+				findNew = true
+			}
+		}
+
+		if !firstRun && findNew {
+			notify.Send(context.Background(), "首页检测到新商品")
+		}
+
+		Sleep(mode.HomeInterval())
+	}
+}
+
 func intervalUpdateCart(ddapi *api.API, config config.Config, mode *config.Mode) {
 
 	for {
@@ -144,6 +175,8 @@ func main() {
 
 	//定期更新购物车
 	go intervalUpdateCart(ddapi, config, mode)
+	// 定期检查首页商品
+	go intervalCheckHomePage(ddapi, mode, notify)
 
 	if mode.BoostMode.Enable() {
 		log.Println("注意！boost模式已启动，到时我将彻底疯狂！！！")

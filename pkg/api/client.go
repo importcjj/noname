@@ -118,6 +118,39 @@ func (api *API) getLocation() ([]string, error) {
 	}, nil
 }
 
+func (api *API) HomeFlowDetail() (*HomeFlowDetail, error) {
+	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/homeApi/homeFlowDetail")
+	if err != nil {
+		return nil, err
+	}
+
+	var query = api.newURLEncodedForm()
+	query.Set("tab_type", "1")
+	query.Set("page", "1")
+	url.RawQuery = query.Encode()
+
+	request, err := http.NewRequest(http.MethodGet, url.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	header, err := api.newHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	header.Set("host", "sunquan.api.ddxq.mobi")
+	request.Header = header
+
+	var detail = new(HomeFlowDetail)
+	err = api.do(request, nil, detail)
+	if err != nil {
+		return nil, err
+	}
+
+	return detail, nil
+}
+
 func (api *API) UserDetail() (*UserDetail, error) {
 	url, err := url.ParseRequestURI("https://sunquan.api.ddxq.mobi/api/v1/user/detail/")
 	if err != nil {
