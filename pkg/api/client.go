@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -23,8 +24,9 @@ type API struct {
 	client *http.Client
 	signer *Signer
 
-	address *Address
-	ddmcUid string
+	address   *Address
+	ddmcUid   string
+	debugMode bool
 }
 
 func NewAPI(config Config) (*API, error) {
@@ -39,9 +41,10 @@ func NewAPI(config Config) (*API, error) {
 	}
 
 	return &API{
-		client: http.DefaultClient,
-		signer: signer,
-		config: &config,
+		client:    http.DefaultClient,
+		signer:    signer,
+		config:    &config,
+		debugMode: os.Getenv("API_DEBUG") == "1",
 	}, nil
 }
 
@@ -218,7 +221,7 @@ func (api *API) Cart() (*CartInfo, error) {
 	}
 	request.Header = header
 	var cart = new(CartInfo)
-	err = api.do(request, nil, cart, true)
+	err = api.do(request, nil, cart)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +378,7 @@ func (api *API) CheckOrder(productList ProductList, useBalance bool) (*CheckOrde
 
 	request.Header = header
 	var checkOrder = new(CheckOrder)
-	err = api.do(request, params, checkOrder, true)
+	err = api.do(request, params, checkOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -483,7 +486,7 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 
 	request.Header = header
 	var addNewOrder = new(AddNewOrder)
-	err = api.do(request, params, addNewOrder, true)
+	err = api.do(request, params, addNewOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -571,11 +574,11 @@ func (api *API) newURLEncodedForm() url.Values {
 	return params
 }
 
-func debugMode(debug ...bool) bool {
-	return len(debug) > 0 && debug[0]
+func (api *API) showDebugInfo() bool {
+	return api.debugMode
 }
 
-func (api *API) do(req *http.Request, form url.Values, data interface{}, debug ...bool) error {
+func (api *API) do(req *http.Request, form url.Values, data interface{}) error {
 	if form != nil {
 		var m = make(map[string]interface{})
 		for k, v := range form {
@@ -590,14 +593,14 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}, debug .
 		form.Set("nars", signResult.Nars)
 		form.Set("sesi", signResult.Sesi)
 
-		if debugMode(debug...) {
+		if api.showDebugInfo() {
 			log.Println(signResult)
 		}
 
 		req.Body = io.NopCloser(strings.NewReader(form.Encode()))
 	}
 
-	if debugMode(debug...) {
+	if api.showDebugInfo() {
 		fmt.Println("====header====")
 		for k, v := range req.Header {
 			fmt.Printf("%s\t%s\n", k, v[0])
@@ -629,7 +632,7 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}, debug .
 	if !response.Success {
 		log.Println(string(body))
 		return NewResponseError(response.Code, response.Message)
-	} else if debugMode(debug...) {
+	} else if api.showDebugInfo() {
 		log.Println(string(body))
 	}
 

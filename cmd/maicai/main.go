@@ -197,58 +197,32 @@ MakeOrder:
 		goto CheckTime
 	}
 	makingOrderProcess = true
-	usebalance := mode.UseBalance()
-	if usebalance {
-		log.Println("使用余额支付")
 
-	}
-	checkOrder, err := ddapi.CheckOrder(cart.NewOrderProductList[0], usebalance)
+CheckOrder:
+	checkOrder, err := ddapi.CheckOrder(cart.NewOrderProductList[0], false)
 	if err != nil {
 		log.Println("检查订单失败", err)
 		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
-			checkOrderSuccess := false
-			for !checkOrderSuccess {
-				if !mode.BoostMode.BoostTime() {
-					log.Println("疯狂结束，并没有抢到，辣鸡玩意")
-					break
-				}
-				log.Println("重新检查订单", err)
-				checkOrder, err = ddapi.CheckOrder(cart.NewOrderProductList[0], usebalance)
-				if err != nil {
-					log.Println("检查订单失败", err)
-					Sleep(mode.RecheckInterval())
-				} else {
-					checkOrderSuccess = true
-				}
-			}
-		} else {
-			goto CheckTime
+			Sleep(mode.RecheckInterval())
+			log.Println("重新检查订单", err)
+			goto CheckOrder
 		}
+		goto CheckTime
 	}
 	log.Println("检查订单成功，开始下单")
 
+NewOrder:
 	order, err := ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
 	if err != nil {
-		newOrderSuccess := false
 		log.Println("下单失败", err)
+
 		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
-			for !newOrderSuccess {
-				if !mode.BoostMode.BoostTime() {
-					log.Println("疯狂结束，并没有抢到，辣鸡玩意")
-					break
-				}
-				log.Println("重新下单", err)
-				order, err = ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
-				if err != nil {
-					log.Println("下单失败", err)
-					Sleep(mode.ReorderInterval())
-				} else {
-					newOrderSuccess = true
-				}
-			}
-		} else {
-			goto CheckTime
+			Sleep(mode.ReorderInterval())
+			log.Println("重新下单", err)
+			goto NewOrder
 		}
+		goto CheckTime
+
 	}
 
 	log.Println("下单成功", order)
