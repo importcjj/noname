@@ -59,25 +59,26 @@ func intervalCheckHomePage(ddapi *api.API, mode *config.Mode, notify notify.Noti
 		homeflow, err := ddapi.HomeFlowDetail()
 		if err != nil {
 			log.Println("获取首页推荐商品失败", err)
-		}
+		} else {
 
-		var firstRun bool
-		if m == nil {
-			firstRun = true
-			m = make(map[string]struct{})
-		}
-
-		var findNew bool
-		for _, product := range homeflow.List {
-			_, ok := m[product.ID]
-			if !ok {
-				m[product.ID] = struct{}{}
-				findNew = true
+			var firstRun bool
+			if m == nil {
+				firstRun = true
+				m = make(map[string]struct{})
 			}
-		}
 
-		if !firstRun && findNew {
-			notify.Send(context.Background(), "首页检测到新商品")
+			var findNew bool
+			for _, product := range homeflow.List {
+				_, ok := m[product.ID]
+				if !ok {
+					m[product.ID] = struct{}{}
+					findNew = true
+				}
+			}
+
+			if !firstRun && findNew {
+				notify.Send(context.Background(), "首页检测到新商品")
+			}
 		}
 
 		Sleep(mode.HomeInterval())

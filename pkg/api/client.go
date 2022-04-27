@@ -393,6 +393,10 @@ func (api *API) CheckOrder(productList ProductList, useBalance bool) (*CheckOrde
 	params.Set("coupons_id", "")
 	params.Set("is_buy_coupons", "0")
 	params.Set("packages", string(packagesData))
+	params.Set("check_order_type", "0")
+	params.Set("is_support_merge_payment", "1")
+	params.Set("showData", "true")
+	params.Set("showMsg", "false")
 
 	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/order/checkOrder")
 	if err != nil {
@@ -458,7 +462,7 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 		Price:                checkOrder.Order.TotalMoney,
 		FreightDiscountMoney: checkOrder.Order.FreightDiscountMoney,
 		FreightMoney:         checkOrder.Order.FreightMoney,
-		OrderFreight:         checkOrder.Order.Freights[0].Freight.FreightRealMoney,
+		OrderFreight:         checkOrder.Order.FreightRealMoney,
 		UserTicketID:         checkOrder.Order.DefaultCoupon.ID,
 	}
 
@@ -527,11 +531,16 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 	return addNewOrder, nil
 }
 
+func (api *API) userAgent() string {
+	ts := strconv.FormatInt(time.Now().Unix(), 10)
+	return fmt.Sprintf("%s/MicroMessenger/(0x%s)", api.config.UserAgent, ts)
+}
+
 func (api *API) newBaseHeader() http.Header {
 
 	header := http.Header{}
 	header.Set("host", "maicai.api.ddxq.mobi")
-	header.Set("User-Agent", api.config.UserAgent)
+	header.Set("User-Agent", api.userAgent())
 	header.Set("content-type", "application/x-www-form-urlencoded")
 	header.Set("Referer", api.config.Refer)
 	header.Set("Origin", api.config.Origin)
