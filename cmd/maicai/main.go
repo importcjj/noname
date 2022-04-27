@@ -17,6 +17,7 @@ import (
 
 var (
 	configFile = flag.String("config", "config.yml", "配置文件")
+	boostMode  = flag.Bool("boost", false, "boost模式")
 )
 
 var globalCart = NewCart()
@@ -98,7 +99,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	config.BoostMode.Enable = *boostMode || config.BoostMode.Enable
 	log.Printf("%#v", config)
 
 	mode, err := config.NewMode()
@@ -152,7 +153,6 @@ func main() {
 	var reserveTime api.ReserveTime
 
 CheckTime:
-
 	for {
 		// boost模式非疯狂时间不请求接口
 		if mode.BoostMode.Enable() && !mode.BoostMode.BoostTime() {
@@ -186,7 +186,6 @@ CheckTime:
 		}
 
 		Sleep(mode.ReserveInterval())
-
 	}
 
 MakeOrder:
