@@ -167,15 +167,19 @@ func main() {
 
 	var inAddress api.Address
 	for index, address := range userAddress.ValidAddress {
-		if config.AddressIndex == -1 {
-			if address.IsDefault {
-				inAddress = address
+		if address.IsDefault {
+			inAddress = address
+			if config.AddressIndex == -1 {
 				break
 			}
-		} else if index == config.AddressIndex {
+		}
+		if index == config.AddressIndex {
 			inAddress = address
 			break
 		}
+	}
+	if len(inAddress.ID) == 0 {
+		log.Fatal("地址选择出错，请检查地址")
 	}
 	log.Printf("[%s] %s %s", inAddress.StationInfo.CityName, inAddress.Location.Address, inAddress.AddrDetail)
 	ddapi.SetAddress(inAddress)
