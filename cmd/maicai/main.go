@@ -72,11 +72,15 @@ func intervalCheckHomePage(ddapi *api.API, mode *config.Mode, notify notify.Noti
 				_, ok := m[product.ID]
 				if !ok {
 					m[product.ID] = struct{}{}
-					findNew = true
+					findNew = !firstRun
+				}
+
+				if findNew {
+					log.Printf("首页新商品: %s", product.Name)
 				}
 			}
 
-			if !firstRun && findNew {
+			if findNew {
 				notify.Send(context.Background(), "首页检测到新商品")
 			}
 		}
