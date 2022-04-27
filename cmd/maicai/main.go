@@ -166,16 +166,22 @@ func main() {
 	}
 
 	var inAddress api.Address
-	for _, address := range userAddress.ValidAddress {
-
+	for index, address := range userAddress.ValidAddress {
 		if address.IsDefault {
 			inAddress = address
-			log.Printf("[%s] %s %s", address.StationInfo.CityName, address.Location.Address, address.AddrDetail)
+			if config.AddressIndex == -1 {
+				break
+			}
+		}
+		if index == config.AddressIndex {
+			inAddress = address
 			break
 		}
-
 	}
-
+	if len(inAddress.ID) == 0 {
+		log.Fatal("地址选择出错，请检查地址")
+	}
+	log.Printf("[%s] %s %s", inAddress.StationInfo.CityName, inAddress.Location.Address, inAddress.AddrDetail)
 	ddapi.SetAddress(inAddress)
 
 	//定期更新购物车
@@ -194,7 +200,7 @@ CheckTime:
 	for {
 		// boost模式非疯狂时间不请求接口
 		if mode.BoostMode.Enable() &&
-			!mode.BoostMode.WarmUpBoostTime() &&
+			//!mode.BoostMode.WarmUpBoostTime() &&
 			!mode.BoostMode.BoostTime() {
 			continue
 		}
