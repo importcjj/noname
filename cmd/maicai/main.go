@@ -193,9 +193,7 @@ func main() {
 CheckTime:
 	for {
 		// boost模式非疯狂时间不请求接口
-		if mode.BoostMode.Enable() &&
-			!mode.BoostMode.WarmUpBoostTime() &&
-			!mode.BoostMode.BoostTime() {
+		if mode.BoostMode.Enable() && !mode.BoostMode.BoostTime() {
 			continue
 		}
 
@@ -236,8 +234,7 @@ CheckOrder:
 	checkOrder, err := ddapi.CheckOrder(cart.NewOrderProductList[0], false)
 	if err != nil {
 		log.Println("检查订单失败", err)
-		if mode.BoostMode.Enable() &&
-			(mode.BoostMode.WarmUpBoostTime() || mode.BoostMode.BoostTime()) {
+		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
 			Sleep(mode.RecheckInterval())
 			log.Println("重新检查订单", err)
 			goto CheckOrder
