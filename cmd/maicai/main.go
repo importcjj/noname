@@ -53,6 +53,42 @@ func Sleep(d time.Duration) {
 	time.Sleep(d)
 }
 
+func intervalCheckHomePage(ddapi *api.API, mode *config.Mode, notify notify.Notify) {
+	var m map[string]struct{}
+	for {
+		homeflow, err := ddapi.HomeFlowDetail()
+		if err != nil {
+			log.Println("获取首页推荐商品失败", err)
+		} else {
+
+			var firstRun bool
+			if m == nil {
+				firstRun = true
+				m = make(map[string]struct{})
+			}
+
+			var findNew bool
+			for _, product := range homeflow.List {
+				_, ok := m[product.ID]
+				if !ok {
+					m[product.ID] = struct{}{}
+					findNew = !firstRun
+				}
+
+				if findNew {
+					log.Printf("首页新商品: %s", product.Name)
+				}
+			}
+
+			if findNew {
+				notify.Send(context.Background(), "首页检测到新商品")
+			}
+		}
+
+		Sleep(mode.HomeInterval())
+	}
+}
+
 func intervalUpdateCart(ddapi *api.API, config config.Config, mode *config.Mode) {
 
 	for {
@@ -146,6 +182,8 @@ func main() {
 
 	//定期更新购物车
 	go intervalUpdateCart(ddapi, config, mode)
+	// 定期检查首页商品
+	go intervalCheckHomePage(ddapi, mode, notify)
 
 	if mode.BoostMode.Enable() {
 		log.Println("注意！boost模式已启动，到时我将彻底疯狂！！！")
@@ -175,8 +213,8 @@ CheckTime:
 			time, ok := times.FirstUsableTime()
 			if ok {
 				reserveTime = time
-				log.Println("预约时间 -> ", time)
-				notify.Send(context.Background(), reserveTime.SelectMsg)
+				s := fmt.Sprintln("预约时间 -> ", reserveTime.SelectMsg)
+				notify.Send(context.Background(), s)
 
 				goto MakeOrder
 			}
@@ -215,7 +253,7 @@ NewOrder:
 		goto NewOrder
 	}
 
-	order, err := ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
+	_, err = ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
 	if err != nil {
 		log.Println("下单失败", err)
 
@@ -228,7 +266,6 @@ NewOrder:
 
 	}
 
-	log.Println("下单成功", order)
 	makingOrderProcess = false
 	notify.Send(context.Background(), "下单成功, 快抓紧付钱！")
 

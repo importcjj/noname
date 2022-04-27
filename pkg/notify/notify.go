@@ -1,6 +1,9 @@
 package notify
 
-import "context"
+import (
+	"context"
+	"log"
+)
 
 type Notify interface {
 	Send(ctx context.Context, content string) error
@@ -17,9 +20,11 @@ func Combine(notify ...Notify) Notify {
 }
 
 func (c *combine) Send(ctx context.Context, content string) error {
+	log.Println(content)
 	for _, n := range c.notify {
 		err := n.Send(ctx, content)
 		if err != nil {
+			log.Printf("failed to notify %v", err)
 			return err
 		}
 	}
