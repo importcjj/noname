@@ -20,6 +20,7 @@ func Combine(notify ...Notify) Notify {
 }
 
 func (c *combine) Send(ctx context.Context, content string) error {
+	log.Println(content)
 	for _, n := range c.notify {
 		err := n.Send(ctx, content)
 		if err != nil {

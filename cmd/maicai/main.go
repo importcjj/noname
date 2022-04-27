@@ -206,8 +206,8 @@ CheckTime:
 			time, ok := times.FirstUsableTime()
 			if ok {
 				reserveTime = time
-				log.Println("预约时间 -> ", time)
-				notify.Send(context.Background(), reserveTime.SelectMsg)
+				s := fmt.Sprintln("预约时间 -> ", reserveTime.SelectMsg)
+				notify.Send(context.Background(), s)
 
 				goto MakeOrder
 			}
@@ -246,7 +246,7 @@ NewOrder:
 		goto NewOrder
 	}
 
-	order, err := ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
+	_, err = ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
 	if err != nil {
 		log.Println("下单失败", err)
 
@@ -259,7 +259,6 @@ NewOrder:
 
 	}
 
-	log.Println("下单成功", order)
 	makingOrderProcess = false
 	notify.Send(context.Background(), "下单成功, 快抓紧付钱！")
 
