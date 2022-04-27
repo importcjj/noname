@@ -23,9 +23,9 @@ boost_mode:
   # 更新购物车的间隔
   cart_interval: "5s"
   # 检查运力的间隔
-  reserve_interval: "500ms"
+  reserve_interval: "400ms"
   # 重新checkOrder的间隔
-  recheck_interval: "500ms"
+  recheck_interval: "400ms"
   # 重新下单的间隔
   reorder_interval: "400ms"
 
