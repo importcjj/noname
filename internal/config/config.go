@@ -17,6 +17,7 @@ type Config struct {
 	UseBalance      bool       `yaml:"use_balance" json:"use_balance"`
 	CartInterval    string     `yaml:"cart_interval" json:"cart_interval" default:"2m"`
 	ReserveInterval string     `yaml:"reserve_interval" json:"reserve_interval" default:"2s"`
+	AddressIndex    int        `yaml:"address_index" json:"address_index" default:-1`
 
 	Dingding   dingding.Config   `yaml:"dicgding" json:"dingding"`
 	ServerChan serverchan.Config `yaml:"serverChan" json:"serverChan"`
