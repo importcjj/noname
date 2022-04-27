@@ -208,6 +208,10 @@ MakeOrder:
 		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
 			checkOrderSuccess := false
 			for !checkOrderSuccess {
+				if !mode.BoostMode.BoostTime() {
+					log.Println("疯狂结束，并没有抢到，辣鸡玩意")
+					break
+				}
 				log.Println("重新检查订单", err)
 				checkOrder, err = ddapi.CheckOrder(cart.NewOrderProductList[0], usebalance)
 				if err != nil {
@@ -229,6 +233,10 @@ MakeOrder:
 		log.Println("下单失败", err)
 		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
 			for !newOrderSuccess {
+				if !mode.BoostMode.BoostTime() {
+					log.Println("疯狂结束，并没有抢到，辣鸡玩意")
+					break
+				}
 				log.Println("重新下单", err)
 				order, err = ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
 				if err != nil {
