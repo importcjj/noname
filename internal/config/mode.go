@@ -15,7 +15,7 @@ type Mode struct {
 }
 
 func (mode *Mode) CartInterval() time.Duration {
-	if mode.BoostMode.Enable() && mode.BoostMode.WarmUpBoostTime() {
+	if mode.BoostMode.Enable() && (mode.BoostMode.WarmUpBoostTime() || mode.BoostMode.BoostTime()) {
 		return mode.BoostMode.GetCartInterval()
 	}
 	return mode.cartInterval
