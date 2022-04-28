@@ -17,6 +17,7 @@ import (
 
 var (
 	configFile = flag.String("config", "config.yml", "配置文件")
+	boostMode  = flag.Bool("boost", false, "boost模式")
 )
 
 var globalCart = NewCart()
@@ -50,6 +51,42 @@ func (cart *Cart) Get() *api.CartInfo {
 func Sleep(d time.Duration) {
 	log.Printf("sleep %s", d)
 	time.Sleep(d)
+}
+
+func intervalCheckHomePage(ddapi *api.API, mode *config.Mode, notify notify.Notify) {
+	var m map[string]struct{}
+	for {
+		homeflow, err := ddapi.HomeFlowDetail()
+		if err != nil {
+			log.Println("获取首页推荐商品失败", err)
+		} else {
+
+			var firstRun bool
+			if m == nil {
+				firstRun = true
+				m = make(map[string]struct{})
+			}
+
+			var findNew bool
+			for _, product := range homeflow.List {
+				_, ok := m[product.ID]
+				if !ok {
+					m[product.ID] = struct{}{}
+					findNew = !firstRun
+				}
+
+				if findNew {
+					log.Printf("首页新商品: %s", product.Name)
+				}
+			}
+
+			if findNew {
+				notify.Send(context.Background(), "首页检测到新商品")
+			}
+		}
+
+		Sleep(mode.HomeInterval())
+	}
 }
 
 func intervalUpdateCart(ddapi *api.API, config config.Config, mode *config.Mode) {
@@ -98,7 +135,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	config.BoostMode.Enable = *boostMode || config.BoostMode.Enable
 	log.Printf("%#v", config)
 
 	mode, err := config.NewMode()
@@ -129,20 +166,28 @@ func main() {
 	}
 
 	var inAddress api.Address
-	for _, address := range userAddress.ValidAddress {
-
+	for index, address := range userAddress.ValidAddress {
 		if address.IsDefault {
 			inAddress = address
-			log.Printf("[%s] %s %s", address.StationInfo.CityName, address.Location.Address, address.AddrDetail)
+			if config.AddressIndex == -1 {
+				break
+			}
+		}
+		if index == config.AddressIndex {
+			inAddress = address
 			break
 		}
-
 	}
-
+	if len(inAddress.ID) == 0 {
+		log.Fatal("地址选择出错，请检查地址")
+	}
+	log.Printf("[%s] %s %s", inAddress.StationInfo.CityName, inAddress.Location.Address, inAddress.AddrDetail)
 	ddapi.SetAddress(inAddress)
 
 	//定期更新购物车
 	go intervalUpdateCart(ddapi, config, mode)
+	// 定期检查首页商品
+	go intervalCheckHomePage(ddapi, mode, notify)
 
 	if mode.BoostMode.Enable() {
 		log.Println("注意！boost模式已启动，到时我将彻底疯狂！！！")
@@ -152,10 +197,11 @@ func main() {
 	var reserveTime api.ReserveTime
 
 CheckTime:
-
 	for {
 		// boost模式非疯狂时间不请求接口
-		if mode.BoostMode.Enable() && !mode.BoostMode.BoostTime() {
+		if mode.BoostMode.Enable() &&
+			//!mode.BoostMode.WarmUpBoostTime() &&
+			!mode.BoostMode.BoostTime() {
 			continue
 		}
 
@@ -168,25 +214,19 @@ CheckTime:
 		if err != nil {
 			log.Println("获取运力失败", err)
 		} else {
-			for _, item := range *times {
-				for _, day := range item.Time {
-					for _, time := range day.Times {
-						if !time.FullFlag {
-							reserveTime = time
-							log.Println("预约时间 -> ", time)
-							notify.Send(context.Background(), reserveTime.SelectMsg)
+			time, ok := times.FirstUsableTime()
+			if ok {
+				reserveTime = time
+				s := fmt.Sprintln("预约时间 -> ", reserveTime.SelectMsg)
+				notify.Send(context.Background(), s)
 
-							goto MakeOrder
-						}
-					}
-				}
+				goto MakeOrder
 			}
 
 			log.Println("当前暂无可用运力...")
 		}
 
 		Sleep(mode.ReserveInterval())
-
 	}
 
 MakeOrder:
@@ -197,61 +237,39 @@ MakeOrder:
 		goto CheckTime
 	}
 	makingOrderProcess = true
-	usebalance := mode.UseBalance()
-	if usebalance {
-		log.Println("使用余额支付")
 
-	}
-	checkOrder, err := ddapi.CheckOrder(cart.NewOrderProductList[0], usebalance)
+CheckOrder:
+	checkOrder, err := ddapi.CheckOrder(cart.NewOrderProductList[0], false)
 	if err != nil {
 		log.Println("检查订单失败", err)
-		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
-			checkOrderSuccess := false
-			for !checkOrderSuccess {
-				if !mode.BoostMode.BoostTime() {
-					log.Println("疯狂结束，并没有抢到，辣鸡玩意")
-					break
-				}
-				log.Println("重新检查订单", err)
-				checkOrder, err = ddapi.CheckOrder(cart.NewOrderProductList[0], usebalance)
-				if err != nil {
-					log.Println("检查订单失败", err)
-					Sleep(mode.RecheckInterval())
-				} else {
-					checkOrderSuccess = true
-				}
-			}
-		} else {
-			goto CheckTime
+		if mode.BoostMode.Enable() &&
+			(mode.BoostMode.WarmUpBoostTime() || mode.BoostMode.BoostTime()) {
+			Sleep(mode.RecheckInterval())
+			log.Println("重新检查订单", err)
+			goto CheckOrder
 		}
+		goto CheckTime
 	}
 	log.Println("检查订单成功，开始下单")
 
-	order, err := ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
-	if err != nil {
-		newOrderSuccess := false
-		log.Println("下单失败", err)
-		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
-			for !newOrderSuccess {
-				if !mode.BoostMode.BoostTime() {
-					log.Println("疯狂结束，并没有抢到，辣鸡玩意")
-					break
-				}
-				log.Println("重新下单", err)
-				order, err = ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
-				if err != nil {
-					log.Println("下单失败", err)
-					Sleep(mode.ReorderInterval())
-				} else {
-					newOrderSuccess = true
-				}
-			}
-		} else {
-			goto CheckTime
-		}
+NewOrder:
+	if mode.BoostMode.Enable() && mode.BoostMode.WarmUpBoostTime() {
+		goto NewOrder
 	}
 
-	log.Println("下单成功", order)
+	_, err = ddapi.AddNewOrder(api.PayTypeAlipay, cart, reserveTime, checkOrder)
+	if err != nil {
+		log.Println("下单失败", err)
+
+		if mode.BoostMode.Enable() && mode.BoostMode.BoostTime() {
+			Sleep(mode.ReorderInterval())
+			log.Println("重新下单", err)
+			goto NewOrder
+		}
+		goto CheckTime
+
+	}
+
 	makingOrderProcess = false
 	notify.Send(context.Background(), "下单成功, 快抓紧付钱！")
 

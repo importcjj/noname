@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -23,8 +24,9 @@ type API struct {
 	client *http.Client
 	signer *Signer
 
-	address *Address
-	ddmcUid string
+	address   *Address
+	ddmcUid   string
+	debugMode bool
 }
 
 func NewAPI(config Config) (*API, error) {
@@ -39,9 +41,10 @@ func NewAPI(config Config) (*API, error) {
 	}
 
 	return &API{
-		client: http.DefaultClient,
-		signer: signer,
-		config: &config,
+		client:    http.DefaultClient,
+		signer:    signer,
+		config:    &config,
+		debugMode: os.Getenv("API_DEBUG") == "1",
 	}, nil
 }
 
@@ -113,6 +116,39 @@ func (api *API) getLocation() ([]string, error) {
 		fmt.Sprint(api.address.Location.Location[0]),
 		fmt.Sprint(api.address.Location.Location[1]),
 	}, nil
+}
+
+func (api *API) HomeFlowDetail() (*HomeFlowDetail, error) {
+	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/homeApi/homeFlowDetail")
+	if err != nil {
+		return nil, err
+	}
+
+	var query = api.newURLEncodedForm()
+	query.Set("tab_type", "1")
+	query.Set("page", "1")
+	url.RawQuery = query.Encode()
+
+	request, err := http.NewRequest(http.MethodGet, url.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	header, err := api.newHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	header.Set("host", "sunquan.api.ddxq.mobi")
+	request.Header = header
+
+	var detail = new(HomeFlowDetail)
+	err = api.do(request, nil, detail)
+	if err != nil {
+		return nil, err
+	}
+
+	return detail, nil
 }
 
 func (api *API) UserDetail() (*UserDetail, error) {
@@ -218,7 +254,7 @@ func (api *API) Cart() (*CartInfo, error) {
 	}
 	request.Header = header
 	var cart = new(CartInfo)
-	err = api.do(request, nil, cart, true)
+	err = api.do(request, nil, cart)
 	if err != nil {
 		return nil, err
 	}
@@ -357,6 +393,10 @@ func (api *API) CheckOrder(productList ProductList, useBalance bool) (*CheckOrde
 	params.Set("coupons_id", "")
 	params.Set("is_buy_coupons", "0")
 	params.Set("packages", string(packagesData))
+	// params.Set("check_order_type", "0")
+	// params.Set("is_support_merge_payment", "1")
+	// params.Set("showData", "true")
+	// params.Set("showMsg", "false")
 
 	url, err := url.ParseRequestURI("https://maicai.api.ddxq.mobi/order/checkOrder")
 	if err != nil {
@@ -375,7 +415,7 @@ func (api *API) CheckOrder(productList ProductList, useBalance bool) (*CheckOrde
 
 	request.Header = header
 	var checkOrder = new(CheckOrder)
-	err = api.do(request, params, checkOrder, true)
+	err = api.do(request, params, checkOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +462,7 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 		Price:                checkOrder.Order.TotalMoney,
 		FreightDiscountMoney: checkOrder.Order.FreightDiscountMoney,
 		FreightMoney:         checkOrder.Order.FreightMoney,
-		OrderFreight:         checkOrder.Order.Freights[0].Freight.FreightRealMoney,
+		OrderFreight:         checkOrder.Order.FreightRealMoney,
 		UserTicketID:         checkOrder.Order.DefaultCoupon.ID,
 	}
 
@@ -483,7 +523,7 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 
 	request.Header = header
 	var addNewOrder = new(AddNewOrder)
-	err = api.do(request, params, addNewOrder, true)
+	err = api.do(request, params, addNewOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -491,11 +531,16 @@ func (api *API) AddNewOrder(payType int, cartInfo *CartInfo, reserveTime Reserve
 	return addNewOrder, nil
 }
 
+func (api *API) userAgent() string {
+	ts := strconv.FormatInt(time.Now().Unix(), 10)
+	return fmt.Sprintf("%s/MicroMessenger/(0x%s)", api.config.UserAgent, ts)
+}
+
 func (api *API) newBaseHeader() http.Header {
 
 	header := http.Header{}
 	header.Set("host", "maicai.api.ddxq.mobi")
-	header.Set("User-Agent", api.config.UserAgent)
+	header.Set("User-Agent", api.userAgent())
 	header.Set("content-type", "application/x-www-form-urlencoded")
 	header.Set("Referer", api.config.Refer)
 	header.Set("Origin", api.config.Origin)
@@ -571,11 +616,11 @@ func (api *API) newURLEncodedForm() url.Values {
 	return params
 }
 
-func debugMode(debug ...bool) bool {
-	return len(debug) > 0 && debug[0]
+func (api *API) showDebugInfo() bool {
+	return api.debugMode
 }
 
-func (api *API) do(req *http.Request, form url.Values, data interface{}, debug ...bool) error {
+func (api *API) do(req *http.Request, form url.Values, data interface{}) error {
 	if form != nil {
 		var m = make(map[string]interface{})
 		for k, v := range form {
@@ -590,14 +635,14 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}, debug .
 		form.Set("nars", signResult.Nars)
 		form.Set("sesi", signResult.Sesi)
 
-		if debugMode(debug...) {
+		if api.showDebugInfo() {
 			log.Println(signResult)
 		}
 
 		req.Body = io.NopCloser(strings.NewReader(form.Encode()))
 	}
 
-	if debugMode(debug...) {
+	if api.showDebugInfo() {
 		fmt.Println("====header====")
 		for k, v := range req.Header {
 			fmt.Printf("%s\t%s\n", k, v[0])
@@ -629,7 +674,7 @@ func (api *API) do(req *http.Request, form url.Values, data interface{}, debug .
 	if !response.Success {
 		log.Println(string(body))
 		return NewResponseError(response.Code, response.Message)
-	} else if debugMode(debug...) {
+	} else if api.showDebugInfo() {
 		log.Println(string(body))
 	}
 

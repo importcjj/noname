@@ -1,6 +1,8 @@
 package api
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type Response struct {
 	Success bool            `json:"success"`
@@ -150,6 +152,20 @@ type ProductListItem struct {
 
 type MultiReserveTime []ReserveTimeItem
 
+func (mt *MultiReserveTime) FirstUsableTime() (ReserveTime, bool) {
+	for _, item := range *mt {
+		for _, day := range item.Time {
+			for _, time := range day.Times {
+				if !time.FullFlag {
+					return time, true
+				}
+			}
+		}
+	}
+
+	return ReserveTime{}, false
+}
+
 type ReserveTimeItem struct {
 	Time []struct {
 		DateStr          string        `json:"date_str"`
@@ -211,4 +227,14 @@ type FreightItem struct {
 }
 
 type AddNewOrder struct {
+}
+
+// 首页相关
+type HomeFlowDetail struct {
+	List []HomeFlowProduct `json:"list"`
+}
+
+type HomeFlowProduct struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
 }
